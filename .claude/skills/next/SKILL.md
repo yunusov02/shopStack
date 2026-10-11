@@ -12,7 +12,7 @@ Don't write code and don't create files. The job is to give the user a clear pat
 
 1. Read `retail-saas-roadmap.md` and look at:
    - which checkboxes are ticked;
-   - each stage's prerequisites ("Oldingi shart");
+   - each stage's prerequisites ("Prerequisites");
    - the MVP line: level 1 `[CORE]` tasks come first (stages 0, 1, 2, 3, 5, 9, 10).
 2. Check the repo's **actual** state: `git log --oneline -15`, `git status`, and the file tree. Work may be done even though its checkbox is unticked, or the other way around. If you find a mismatch, tell the user.
 3. If an argument is given (`$ARGUMENTS`), focus on that task.

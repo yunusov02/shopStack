@@ -1,6 +1,6 @@
 # Domain rules
 
-The roadmap's "Domen qoidalari" apply to the whole project. In review, violating any of them is a 🔴 (must fix).
+The roadmap's "Domain rules" apply to the whole project. In review, violating any of them is a 🔴 (must fix).
 
 - **Money:** only `Decimal` (`Numeric(p, s)` in the DB) or integer minor units (tiyin). Never `float`, not even in tests.
 - **Quantity:** `Decimal(12, 3)` for weighted products.

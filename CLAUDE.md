@@ -1,6 +1,6 @@
 # shopStack
 
-Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `retail-saas-roadmap.md` (written in Uzbek): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria.
+Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `retail-saas-roadmap.md` (written in English): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria.
 
 ## Workflow: the user writes, Claude reviews
 
@@ -21,7 +21,7 @@ Skills:
 ## Language
 - Talk to the user in Uzbek (Latin script).
 - Code, identifiers, commit messages, and code comments are in English.
-- ADRs and documents in `docs/` and `roadmap/` are in Uzbek, following the roadmap templates.
+- ADRs and documents in `docs/` are in English, following the roadmap templates.
 - `CLAUDE.md`, `.claude/rules/`, and `.claude/skills/` are in English.
 
 ## Stack

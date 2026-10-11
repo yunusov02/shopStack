@@ -26,7 +26,7 @@ Read every changed file **in full**; a diff alone lacks context. Also read relat
 
 Find which stage and task in `retail-saas-roadmap.md` this change belongs to. Then answer three questions:
 - Is the task requirement fully met?
-- How close is the stage to its completion criteria ("Tugash mezoni")?
+- How close is the stage to its completion criteria ("Done when")?
 - Has something from a later stage been pulled in and over-engineered now? Scope creep is a finding too.
 
 ## 3. Automated checks
