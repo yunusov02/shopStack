@@ -222,10 +222,10 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 
 - [X] `[CORE]` Repo, branch protection, conventional commits
 - [X] `[CORE]` `uv`, `pyproject.toml`, lock file
-- [X] `[CORE]` Modular structure: every domain module has a router, schemas, service, repository, models
-- [X] `[CORE]` Application factory and lifespan (opening and closing connections)
-- [X] `[CORE]` Configuration with Pydantic Settings, environment variables, all times UTC and timezone-aware
-- [X] `[CORE]` Async SQLAlchemy engine and session, Alembic, Unit of Work foundation
+- [ ] `[CORE]` Modular structure: every domain module has a router, schemas, service, repository, models
+- [ ] `[CORE]` Application factory and lifespan (opening and closing connections)
+- [ ] `[CORE]` Configuration with Pydantic Settings, environment variables, all times UTC and timezone-aware
+- [ ] `[CORE]` Async SQLAlchemy engine and session, Alembic, Unit of Work foundation
 - [ ] `[CORE]` Multi-stage Dockerfile, Compose (Postgres, Redis), healthchecks
 - [ ] `[CORE]` Liveness and readiness endpoints
 - [ ] `[CORE]` Ruff, mypy, pre-commit, pytest (async), httpx, Testcontainers
