@@ -1,6 +1,6 @@
 # shopStack
 
-Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `retail-saas-roadmap.md` (written in English): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria.
+Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `docs/retail-saas-roadmap.md` (written in English): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria. The roadmap is broken into small tasks in `docs/tasks/` (one file per stage, IDs like `S3.T07`); `/next` picks from there.
 
 ## Workflow: the user writes, Claude reviews
 

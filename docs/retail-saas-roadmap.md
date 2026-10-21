@@ -2,6 +2,8 @@
 
 Multi-tenant SaaS: **POS + inventory + procurement + pricing and promotions + customers and loyalty + finance + analytics + offline POS + e-commerce + delivery + integrations**.
 
+**Part II (ERP extension, stages 26–33):** general ledger and accounting, installment sales and gift cards, production, demand planning, workflow engine, payroll, reporting and documents, multi-company.
+
 Goal: learn middle+ backend concepts in practice through one project, and understand **why** every technical decision was made.
 
 ---
@@ -29,8 +31,13 @@ Goal: learn middle+ backend concepts in practice through one project, and unders
 | 3. Close to senior | 12, 13, 14, 16 | Offline sync, events, first services |
 | 4. Full platform | 11, 15, 17–21 | HR, Platform and Billing (Django), e-commerce, delivery, integrations, K8s |
 | 5. Additional services | 22–25 | Audit and Supplier portal (Django + DRF), Media and Marketplace sync (FastAPI) |
+| 6. ERP | 26–33 (part II) | General ledger, installments, production, planning, workflow engine, payroll, reporting, multi-company. The project becomes a full ERP |
 
 > **About level 5:** these stages were added to the roadmap later; their numbers reflect the order they were added, not the order of work. Work order follows **"Prerequisites"**: stage 23 can start after stage 14, stages 22 and 24 after you have Django experience, i.e. after stage 15. But finish the `[CORE]` part of levels 1–3 first: every new service is a permanent cost (CI, database, monitoring, contract tests).
+
+> **About level 6 (part II):** these stages turn the retail SaaS into an ERP. None of them is needed for a job search; all of them are what separates "built a shop app" from "built an ERP" in an interview. They live in the monolith and reuse the ledgers, state machines and approval flows of part I. See **Part II** after stage 25.
+
+> **Concept index:** every interview term (database, distributed systems, API, caching, messaging, architecture, Python, Django, testing, observability, DevOps, security, performance, team vocabulary) is mapped to the stage or theory track where this roadmap teaches it. See **Concept index** near the end.
 
 ---
 
@@ -79,6 +86,7 @@ Goal: learn middle+ backend concepts in practice through one project, and unders
   │ FastAPI modular monolith (SQLAlchemy 2.0 async, Pydantic v2)                 │    │ PgBouncer → PostgreSQL    │
   │ accounts · tenants (replica) · catalog · inventory · procurement             │    │ RLS, FTS, partitions      │
   │ sales · pricing · customers · finance · orders · hr · sync                   │◄──►│                           │
+  │ accounting · credit · production · planning · workflow · payroll · reporting │    │                           │
   │ integrations: payment, fiscal, printer adapters · outbound webhooks          │    │ Redis                     │
   │ outbox table + relay (FOR UPDATE SKIP LOCKED)                                │    │ cache, OTP, sessions,     │
   │ internal API ◄── commands from delivery, supplier portal, marketplace sync   │    │ locks, rate limits, GEO   │
@@ -144,12 +152,13 @@ How to read the diagram:
 | Media | Separate service (FastAPI) | Different load (bandwidth and disk), heavy image processing; files never pass through the monolith |
 | Supplier portal | Separate service (Django + DRF + HTMX) | Users are outside the tenant and work with several tenants; separate identity and security boundary. Django: lots of auth, forms and CRUD, and the built-in auth system fits a separate identity well |
 | Marketplace sync | Separate service (FastAPI + worker) | External APIs are unreliable and rate limited; their problems must not affect the monolith |
+| General ledger, installments, production, planning, workflow engine, payroll, reporting, multi-company (part II) | Monolith (FastAPI) | Every one of them posts to the same ledgers and stock as sales, and the journal entry must be in the same transaction as the document that created it |
 
 ### Service catalog
 
 | Service | Stage | Stack | Owns (data) | Publishes | Consumes | Sync interfaces |
 |---|---|---|---|---|---|---|
-| Core (monolith) | 0–13, 17, 19 | FastAPI, SQLAlchemy, Postgres, Redis | users, memberships, catalog, stock ledger, POs, sales, customers, finance, orders, tenant replica | `sale.*`, `stock.*`, `order.*`, `purchase_order.*`, `payable.*`, `price_list.changed`, `customer.created`, `tenant.provisioned`, `audit.recorded` | `tenant.*`, `domain.changed`, `entitlements.changed`, `delivery.*`, `media.asset.ready`, `supplier.linked` | back-office, POS sync, storefront API, internal API (commands) |
+| Core (monolith) | 0–13, 17, 19, 26–33 | FastAPI, SQLAlchemy, Postgres, Redis | users, memberships, catalog, stock ledger, POs, sales, customers, finance, orders, tenant replica; part II: journal entries, installment contracts, work orders, payroll runs, report definitions | `sale.*`, `stock.*`, `order.*`, `purchase_order.*`, `payable.*`, `price_list.changed`, `customer.created`, `tenant.provisioned`, `audit.recorded`; part II: `journal_entry.posted`, `installment.overdue`, `work_order.completed`, `replenishment.suggested`, `payroll.posted` | `tenant.*`, `domain.changed`, `entitlements.changed`, `delivery.*`, `media.asset.ready`, `supplier.linked` | back-office, POS sync, storefront API, internal API (commands) |
 | Notification | 14 | worker + FastAPI, Postgres, RabbitMQ | templates, messages, recipient preferences | none | `notification.send` commands (RabbitMQ) | status API, provider callbacks |
 | Platform and Billing | 15 | Django + DRF, Celery, Postgres | tenants, domains, plans, subscriptions, invoices, payments, platform staff | `tenant.*`, `domain.changed`, `entitlements.changed`, `audit.recorded` | `tenant.provisioned`, `tenant.provisioning_failed` | Django admin, billing API, JWKS, impersonation tokens, payment webhooks |
 | Analytics | 16 | FastAPI, Postgres / ClickHouse | read models (projections) | none | `sale.*`, `stock.*`, `order.*`, `customer.created`, `delivery.status_changed` | reports API (JWKS auth) |
@@ -181,6 +190,11 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 | `payable.payment_recorded.v1` | Core | Supplier portal | 24 |
 | `supplier.linked.v1` | Supplier portal | Core | 24 |
 | `price_list.changed.v1` | Core | Marketplace sync | 25 |
+| `journal_entry.posted.v1` | Core | Analytics (financial dashboards), Audit | 26 |
+| `installment.overdue.v1` | Core | Core turns it into a notification command; Analytics | 27 |
+| `work_order.completed.v1` | Core | Analytics | 28 |
+| `replenishment.suggested.v1` | Core | Analytics; Supplier portal `[OPT]` | 29 |
+| `payroll.posted.v1` | Core | Analytics (aggregated only, no personal amounts) | 31 |
 
 **Commands (not events):** `notification.send.v1` goes over RabbitMQ from the core, Platform and Delivery. Calls to the core's internal API (PO confirmation, ASN, marketplace order import, delivery refunds) are synchronous commands with a service token and an `Idempotency-Key`.
 
@@ -212,6 +226,10 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 | Playwright | 18 | End-to-end tests |
 | MinIO (S3 API) | 23 | File storage, presigned URLs |
 | Image processing library (ADR) | 23 | Thumbnails, WebP, EXIF stripping |
+| `hypothesis` | 6, 26, 31 | Property-based tests for the pure engines |
+| `py-spy`, `memray` | 10 | Profiling and memory leak hunting |
+| Terraform or OpenTofu (ADR) | 21 `[EXT]` | Infrastructure as Code |
+| PDF rendering library (ADR) | 32 | Invoices, payslips, statements, report exports |
 
 ---
 
@@ -228,11 +246,13 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [X] `[CORE]` Async SQLAlchemy engine and session, Alembic, Unit of Work foundation
 - [ ] `[CORE]` Multi-stage Dockerfile, Compose (Postgres, Redis), healthchecks
 - [ ] `[CORE]` Liveness and readiness endpoints
+- [ ] `[CORE]` Request lifecycle: middleware order (correlation ID → tenant → auth → error handler), CORS middleware with an explicit origin list; ADR: ASGI vs WSGI, and what the event loop means for blocking calls
 - [ ] `[CORE]` Ruff, mypy, pre-commit, pytest (async), httpx, Testcontainers
-- [ ] `[CORE]` CI: lint, mypy, tests, Alembic migration check
+- [ ] `[CORE]` Test foundation: the test pyramid (unit, integration, e2e) written down in `tests/README.md`; `dependency_overrides` for FastAPI dependencies; fixtures with explicit scope; a fake for every external port; coverage measured in CI as a signal, not a target
+- [ ] `[CORE]` CI: lint, mypy, tests, Alembic migration check; the Docker image is the build artifact (tagged by commit SHA)
 - [ ] `[CORE]` ADRs: modular monolith; why the monolith is FastAPI and the Platform service is Django; async vs sync; repository and Unit of Work; frontend (back-office Jinja2 + HTMX, POS terminal as a PWA in stage 12)
 
-**Concepts:** application factory, lifespan, dependency injection, settings management, Unit of Work, containers, CI.
+**Concepts:** application factory, lifespan, dependency injection, settings management, Unit of Work, request lifecycle and middleware, ASGI vs WSGI, test pyramid and dependency overrides, containers and images, CI and build artifacts, packaging (lock file, wheel vs sdist).
 **Done when:** `make up` brings the project up, CI is green.
 
 ---
@@ -252,7 +272,9 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[CORE]` Password hashing (Argon2); you build auth **yourself** (no ready-made library)
 - [ ] `[CORE]` API standards: single error format, `/api/v1/`, OpenAPI docs
 - [ ] `[CORE]` JWT (rotation, reuse detection, tenant claim check), server-side session for the back-office (Redis)
+- [ ] `[CORE]` ADR: access token vs refresh token (lifetimes, where the client stores them, what rotation protects against); why a Redis session for the back-office and JWT for the POS; stateless API, no sticky sessions
 - [ ] `[CORE]` CSRF protection (you add it yourself for cookie sessions)
+- [ ] `[CORE]` Web security baseline (OWASP Top 10): SQL injection (parametrised queries only, a test with hostile input), XSS (autoescape plus a `Content-Security-Policy` header), SSRF (outbound URL validation, needed for stage 19 webhooks), security headers; **least privilege** for DB roles and tokens
 - [ ] `[CORE]` Phone OTP (hashing, TTL, attempts, cooldown, atomic check, enumeration protection)
 - [ ] `[CORE]` TOTP 2FA (for tenant owners and managers; platform staff 2FA is in Django in stage 15)
 - [ ] `[CORE]` Rate limiting (sliding window)
@@ -264,6 +286,8 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[CORE]` Location-level access: `Membership` → allowed `Location`s
 - [ ] `[CORE]` Permissions through **dependency injection** (the endpoint declares the required permission code), object-level location check, `404` for another tenant or location
 - [ ] `[EXT]` Tenants create their own roles. **Privilege escalation protection:** a user can only grant permissions they already have
+- [ ] `[EXT]` ADR: RBAC vs ABAC. Location-level access is an attribute check on top of roles; write down where pure RBAC stops being enough (amount limits, ownership, time of day)
+- [ ] `[OPT]` OAuth 2.0 / OIDC login through an external identity provider (ADR: when to integrate instead of building)
 - [ ] `[CORE]` Role × permission × endpoint matrix test
 
 ### Platform operations (temporary, until stage 15)
@@ -272,7 +296,7 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[CORE]` A separate DB role that bypasses RLS for internal operations, run in a separate process
 - [ ] `[CORE]` Invites, audit log (append-only)
 
-**Concepts:** multi-tenancy, RLS, fail-closed filtering, authentication vs authorization, token rotation, OTP security, RBAC.
+**Concepts:** multi-tenancy, RLS, fail-closed filtering, authentication vs authorization, access vs refresh tokens, sessions vs tokens, token rotation, OTP security, hashing and salting, RBAC vs ABAC, OWASP Top 10, least privilege.
 **Done when:** tenant isolation, RLS, OTP and RBAC tests are green.
 
 ---
@@ -331,7 +355,7 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[CORE]` Warehouse → store and store → store transfers
 - [ ] `[CORE]` Partial receipt and discrepancies (short, damaged)
 - [ ] `[CORE]` Reservations with expiry (held sale, e-commerce order, transfer); expired ones are released automatically
-- [ ] `[CORE]` Reservation concurrency: two parallel reservations never exceed `available`
+- [ ] `[CORE]` Reservation concurrency: two parallel reservations never exceed `available` (a classic race condition; ADR: pessimistic row lock vs atomic `UPDATE ... WHERE available >= :qty`)
 
 ### Warehouse operations
 - [ ] `[EXT]` Zones and bins inside a warehouse
@@ -339,7 +363,7 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[EXT]` **Internal transfer:** moving from bin to bin inside one location; total `on_hand` doesn't change, only the placement does, but a movement is still recorded
 - [ ] `[EXT]` Picking list (for transfers and orders), picking route
 
-**Concepts:** ledger, available-to-promise, in-transit stock, state machines, reservation concurrency.
+**Concepts:** ledger, available-to-promise, in-transit stock, state machines, race conditions, pessimistic locking vs atomic updates.
 **Done when:** reconciliation matches after any sequence of operations; the parallel reservation test is green.
 
 ---
@@ -382,7 +406,7 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 
 ### Completion
 - [ ] `[CORE]` One transaction: validation → stock lock (ordered by `variant_id`) → decrement → movements → payments → snapshots (price, cost, tax, discount) → `completed`
-- [ ] `[CORE]` `Idempotency-Key`
+- [ ] `[CORE]` `Idempotency-Key`: the response is stored with a TTL, a repeated key with a different payload is a `409`
 - [ ] `[CORE]` **Gapless receipt numbers** per location: Postgres sequences have gaps, so use a counter row with a row lock (`with_for_update`). Measure the cost
 
 ### Receipt
@@ -409,10 +433,12 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 
 ### Concurrency and load
 - [ ] `[CORE]` Cause a deadlock on purpose and fix it; retries
-- [ ] `[CORE]` Compare with optimistic locking; isolation level experiments
+- [ ] `[CORE]` **Pessimistic vs optimistic locking:** `with_for_update` vs a version column on the stock row; implement both, measure under load, keep one (ADR)
+- [ ] `[CORE]` **Isolation level lab:** reproduce a **lost update**, a **non-repeatable read** and a **phantom read** at `READ COMMITTED` and `REPEATABLE READ`; run the sale under `SERIALIZABLE` with retry on serialization failure; explain why `READ UNCOMMITTED` and dirty reads don't exist in Postgres; results in the README
+- [ ] `[CORE]` ACID letter by letter on the sale transaction: atomicity (rollback and savepoints when a payment adapter fails), consistency (constraints and the ledger), isolation (the lab above), durability (what `COMMIT` waits for, WAL)
 - [ ] `[CORE]` Locust: 50 parallel cashiers; results in the README
 
-**Concepts:** ACID, locks, deadlocks, isolation anomalies, idempotency, gapless sequences, step-up authorization, tax and rounding.
+**Concepts:** ACID (atomicity, consistency, isolation, durability; commit, rollback, savepoints), pessimistic vs optimistic locking, race conditions, deadlocks, isolation levels and anomalies (dirty, non-repeatable and phantom reads, lost update), idempotency keys, gapless sequences, step-up authorization, tax and rounding, the sale as the hot path and critical path of the system.
 **Done when:** under load testing, stock never goes negative and a sale is never written twice; partial refunds, exchanges and voids work correctly.
 
 > **Job search marker:** together with stages 9 and 10, this completes the level 1 MVP. Update your resume and start applying.
@@ -482,15 +508,18 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 
 - [ ] `[CORE]` RabbitMQ broker, Celery; tasks carry `tenant_id`; tasks are sent only **after commit** (the Unit of Work dispatches queued tasks after commit)
 - [ ] `[CORE]` Synchronous SQLAlchemy session for workers (Celery is synchronous). ADR: Celery vs async alternatives (arq, taskiq)
-- [ ] `[CORE]` Retries, backoff, `acks_late`, idempotent tasks, separate queues, Celery beat, Flower
+- [ ] `[CORE]` Retries with exponential backoff and jitter, `acks_late`, idempotent tasks, separate queues, Celery beat, Flower
+- [ ] `[CORE]` Queue mechanics: ack / nack and requeue, prefetch count as **backpressure**, a **poison message** (fails forever) goes to a DLQ after the maximum retries; message queue (work) vs event stream (facts), the ADR that stage 13 builds on
 - [ ] `[CORE]` Move OTP and invite sending to Celery
-- [ ] `[CORE]` Redis cache (catalog, prices, domains), tenant prefix, invalidation, stampede protection
+- [ ] `[CORE]` Redis cache (catalog, prices, domains): **cache-aside** (ADR: vs write-through and write-back), TTL, tenant prefix, invalidation on write, hit/miss ratio as a metric
+- [ ] `[CORE]` Cache failure modes: **stampede** and thundering herd (lock or early refresh), eviction policy (`maxmemory-policy`, LRU vs LFU), **warm-up** after deploy, hot keys (one tenant's price list)
 - [ ] `[CORE]` **Distributed lock** (Redis, with TTL and token): e.g. so a nightly job runs in only one instance. ADR: why stock uses DB locks, not Redis locks; the debate around Redlock
-- [ ] `[CORE]` **Import/export:** large CSV/Excel product imports run asynchronously, with progress, an error report, and no duplicates on re-upload
+- [ ] `[CORE]` **Import/export:** large CSV/Excel product imports run asynchronously, with progress, an error report, and no duplicates on re-upload (**upsert** with `INSERT ... ON CONFLICT`)
+- [ ] `[EXT]` Import progress in the browser: ADR comparing polling, long polling, **SSE** and WebSocket; SSE for one-way progress, WebSocket where the client also sends
 - [ ] `[CORE]` **Bulk operations:** bulk price updates, `bulk_create` and RLS
 - [ ] `[EXT]` FastAPI WebSocket: remote approval and live dashboard; Redis pub/sub for multiple instances
 
-**Concepts:** queues and caches, at-least-once, limits of distributed locks, cache invalidation.
+**Concepts:** queues and caches, at-least-once delivery, ack / requeue / DLQ / poison messages, backpressure, cache patterns (cache-aside, write-through, write-back), TTL and eviction (LRU, LFU), stampede and warm-up, limits of distributed locks, cache invalidation, upsert, push options (polling, long polling, SSE, WebSocket).
 **Done when:** no tasks are lost when a worker is restarted; a 100,000-row import passes without memory problems.
 
 ---
@@ -499,18 +528,22 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 **Prerequisites:** 9
 
 - [ ] `[CORE]` Seed: 10M+ sale lines, one very large tenant
-- [ ] `[CORE]` `EXPLAIN (ANALYZE, BUFFERS)`; composite, partial, covering, BRIN and GIN indexes; `pg_stat_statements`
+- [ ] `[CORE]` `EXPLAIN (ANALYZE, BUFFERS)`: full table scan vs index scan vs bitmap scan, join strategies (nested loop, hash, merge), reading the execution plan; composite, partial, covering (`INCLUDE`), BRIN and GIN indexes; `pg_stat_statements`
+- [ ] `[CORE]` SQL lab on real reports: INNER, LEFT, RIGHT and FULL joins, semi and anti joins (`EXISTS`), window functions, `GROUP BY ... FILTER`; one report written three ways with the plans compared
 - [ ] `[CORE]` N+1: a test helper that counts queries; eager loading strategies (`selectinload`, `joinedload`); disable lazy loading completely in async (`raise` strategy)
-- [ ] `[CORE]` Filtering and sorting only on allowed fields (whitelist), cursor pagination
+- [ ] `[CORE]` Filtering and sorting only on allowed fields (whitelist); **offset vs cursor pagination** measured at page 10,000
 - [ ] `[CORE]` Soft delete and `WHERE deleted_at IS NULL` partial indexes
 - [ ] `[CORE]` Partitioning the sales table by month
-- [ ] `[CORE]` Summary tables or materialized views
+- [ ] `[CORE]` Summary tables or materialized views: deliberate **denormalization** (ADR: when to break normal form and how the copy is kept consistent)
+- [ ] `[CORE]` Hotspots: one very large tenant and one hot key in Redis; what breaks first and how to spread the load (ADR)
+- [ ] `[CORE]` **Profiling:** `py-spy` and `memray` on an API worker under load; find one bottleneck and one memory leak that you planted on purpose
+- [ ] `[EXT]` **Read replica** for reports: streaming replication in Compose, a read-only session, measuring replication lag and what a stale read means for the user
 - [ ] `[CORE]` **Full-text search:** `tsvector` + `pg_trgm`; Uzbek (Latin and Cyrillic) and Russian; Latin–Cyrillic transliteration
 - [ ] `[CORE]` PgBouncer: transaction pooling and `SET LOCAL`; the problem with asyncpg prepared statements and its fix
 - [ ] `[CORE]` SQLAlchemy connection pool settings: size, overflow, timeout; measure what happens when the pool runs out
 - [ ] `[OPT]` OpenSearch: an index synced through events; ADR: when Postgres is not enough
 
-**Concepts:** B-tree, query planner, partition pruning, FTS, connection pooling.
+**Concepts:** B-tree, query planner and execution plans, join strategies, normalization vs denormalization, offset vs cursor pagination, partition pruning, FTS, connection pooling, read replicas and replication lag, hotspots and hot keys, profiling, bottlenecks and memory leaks.
 **Done when:** before/after results for every report are in the README.
 
 ---
@@ -562,7 +595,8 @@ All events go through Kafka with a versioned envelope (stage 13): `event_id`, `t
 - [ ] `[CORE]` Module boundaries with `import-linter`
 - [ ] `[CORE]` Removing cross-module JOINs and FKs with parts that will be extracted
 - [ ] `[CORE]` Domain events: `sale.completed.v1`, `sale.refunded.v1`, `stock.changed.v1`, `stock.low.v1`, `order.ready_for_delivery.v1`, `customer.created.v1`
-- [ ] `[CORE]` Event envelope, schemas, versioning
+- [ ] `[CORE]` Event envelope, schemas, versioning; backward-compatible changes (adding optional fields) vs breaking changes (a new version with parallel consumers)
+- [ ] `[CORE]` ADR: delivery semantics. At-most-once vs at-least-once vs "exactly-once"; why the outbox on the producer side plus an idempotent consumer (**inbox pattern**, a processed-events table) is the practical answer
 - [ ] `[CORE]` **Sync vs async boundary** (ADR). After `SaleCompleted`:
 
 ```
@@ -578,7 +612,7 @@ Through outbox → Kafka (async):       electronic receipt, notifications, analy
 
 Later stages add their own events; the full list is in the **Event catalog**.
 
-**Concepts:** module boundaries, domain events, transactional outbox, event versioning, partitioning and ordering, sync vs async boundary.
+**Concepts:** module boundaries, bounded contexts, domain events, transactional outbox and inbox, delivery semantics, event versioning and schema compatibility, partitioning and ordering, sync vs async boundary.
 **Done when:** the "Conditions for extracting a microservice" are fully met.
 
 ---
@@ -710,6 +744,7 @@ Later stages add their own events; the full list is in the **Event catalog**.
 - [ ] `[CORE]` Publishing: an `is_online` flag on products, an online price list (sales channel), which locations' stock is visible online
 - [ ] `[CORE]` Catalog browsing: categories, facet filters (brand, price range, attributes), full-text search from stage 10, cursor pagination
 - [ ] `[CORE]` Caching: HTTP caching (`ETag`, `Cache-Control`) and a Redis cache invalidated on price and stock changes
+- [ ] `[CORE]` CORS for a storefront SPA (allowed origins per tenant domain, preflight caching); versioning and backward-compatibility rules for a public API; ADR: REST here, where RPC or GraphQL would fit, and why not
 - [ ] `[EXT]` SEO: slugs, sitemap, canonical URLs
 - [ ] `[OPT]` A minimal storefront UI (Jinja2 + HTMX) to demo the whole flow
 
@@ -771,6 +806,7 @@ Later stages add their own events; the full list is in the **Event catalog**.
 ### Tracking
 - [ ] `[CORE]` Delivery state machine: `created → offered → assigned → picked_up → in_transit → delivered / failed → returned_to_store`; transitions logged and published as `delivery.status_changed.v1`
 - [ ] `[CORE]` Courier location updates: throttled on the client, current position in Redis GEO, sampled history in PostGIS
+- [ ] `[CORE]` ADR: SSE vs WebSocket vs long polling for tracking (the customer only reads, the back-office also sends)
 - [ ] `[CORE]` WebSocket tracking for the customer and the back-office; Redis pub/sub across several instances; reconnects and missed updates
 - [ ] `[CORE]` A courier going offline in the middle of a delivery: timeout, then reassignment
 - [ ] `[EXT]` ETA (distance and average speed at first)
@@ -797,14 +833,14 @@ Later stages add their own events; the full list is in the **Event catalog**.
 **Where:** `modules/integrations` · **Prerequisites:** 18 (parts can be done earlier)
 
 - [ ] `[CORE]` Adapter pattern: `PaymentProvider`, `FiscalProvider`, `SmsProvider`, `ReceiptPrinter` interfaces; fakes for tests
-- [ ] `[CORE]` Timeouts, retries, circuit breaker
+- [ ] `[CORE]` Timeouts, retries with exponential backoff and jitter, circuit breaker, **bulkhead** (a separate pool and queue per provider), **graceful degradation** (card payment unavailable, cash still works)
 - [ ] `[CORE]` **Outbound webhooks** to tenant systems: signatures, retries, delivery log
 - [ ] `[EXT]` Card and QR payment providers at the POS
 - [ ] `[EXT]` Fiscal integration: check the current requirements in Uzbekistan; adapter and mock
 - [ ] `[EXT]` Receipt printer (ESC/POS), barcode scanner (keyboard mode), electronic scale
 - [ ] `[EXT]` Export to accounting systems (e.g. file formats for 1C)
 
-**Concepts:** anti-corruption layer, circuit breaker, unreliability of external systems.
+**Concepts:** anti-corruption layer, ports and adapters, circuit breaker, bulkhead, graceful degradation, fallback, SSRF on outbound calls, unreliability of external systems.
 **Done when:** every external call goes through an adapter that has a fake; when a fake provider times out, the circuit breaker opens and the POS keeps selling (card payment shows as unavailable, cash still works); outbound webhooks are retried and the delivery log shows every attempt.
 
 ---
@@ -815,13 +851,13 @@ Later stages add their own events; the full list is in the **Event catalog**.
 - [ ] `[CORE]` Correlation ID across HTTP, Kafka, RabbitMQ and Celery, in every service (FastAPI and Django)
 - [ ] `[CORE]` OpenTelemetry tracing: FastAPI, Django, SQLAlchemy, Django ORM, httpx, Celery, Kafka, RabbitMQ; one trace follows a sale from the POS through the outbox to Analytics and Notification
 - [ ] `[CORE]` Prometheus: RED metrics per service, business metrics (sales per minute, failed payments, oversell conflicts), outbox backlog, consumer lag per consumer group, queue length, DLQ size, offline terminal sync delay
-- [ ] `[CORE]` Centralized logs with **Loki**: structured JSON, no personal data
-- [ ] `[CORE]` Grafana: a platform overview dashboard and one per service; alerts with runbooks; Sentry for errors
-- [ ] `[CORE]` SLIs and SLOs (e.g. sale completion p99 latency and success rate), error budgets
+- [ ] `[CORE]` Structured logging contract: JSON, correlation ID, tenant, log levels, no personal data; what goes to logs vs metrics vs traces. Centralized logs with **Loki**
+- [ ] `[CORE]` Grafana: a platform overview dashboard and one per service; alerts with runbooks; symptom-based alerting so there is no **alert fatigue**; Sentry for errors
+- [ ] `[CORE]` **SLI vs SLO vs SLA:** p50 / p95 / p99 and tail latency, throughput, success rate for sale completion; error budgets and what a burnt budget changes in priorities
 - [ ] `[CORE]` Liveness and readiness in every service; synthetic checks for key flows (login, sale, storefront checkout)
 - [ ] `[CORE]` Chaos experiments and postmortems
 
-**Concepts:** traces, metrics and logs, RED and USE methods, SLOs and error budgets, context propagation.
+**Concepts:** traces, metrics and logs, structured logging, distributed tracing, RED and USE methods, latency percentiles and tail latency, throughput, SLI / SLO / SLA and error budgets, alert fatigue, context propagation.
 **Done when:** one sale can be followed in a single trace across the core, Kafka, Notification and Analytics; stopping a consumer triggers a lag alert that links to a runbook; every chaos experiment has a written postmortem.
 
 ---
@@ -832,7 +868,11 @@ Later stages add their own events; the full list is in the **Event catalog**.
 - [ ] `[CORE]` k3d/kind, Helm charts: one chart per service on top of a shared library chart (or an umbrella chart for the whole shopStack)
 - [ ] `[CORE]` Stateful dependencies (Postgres per service, Kafka, RabbitMQ, Redis, MinIO). ADR: run them in the cluster with operators or use managed services
 - [ ] `[CORE]` Wildcard ingress, cert-manager (DNS-01), host-based routing (tenant subdomains, `suppliers.`, `admin.`, `courier.`, `media.`)
-- [ ] `[CORE]` Secrets (ADR: sealed secrets or an external secrets manager), resource limits, probes, a migration Job per service (Alembic and Django `migrate`)
+- [ ] `[CORE]` Secrets (ADR: sealed secrets or an external secrets manager), **secret rotation** without downtime (DB password, JWT keys through JWKS), resource limits, probes, a migration Job per service (Alembic and Django `migrate`)
+- [ ] `[CORE]` Deployment strategies (ADR): **rolling** (default), **blue-green** and **canary**; what each costs with database migrations; a rehearsed **rollback**
+- [ ] `[CORE]` Stateless services: no local state, sessions in Redis, no sticky sessions; horizontal vs vertical scaling measured on the API and on Postgres
+- [ ] `[CORE]` **High availability:** list every single point of failure (Postgres, Redis, RabbitMQ, Kafka, ingress); Postgres failover (replica and promotion, ADR: operator vs managed); **leader election** for singletons (Celery beat, outbox relay) with a Kubernetes lease or a Redis lock
+- [ ] `[EXT]` **Infrastructure as Code:** the cluster and managed services in Terraform/OpenTofu (ADR); immutable infrastructure, no manual changes
 - [ ] `[CORE]` Network policies: every service reaches only what it needs; the core's internal API is never exposed through the ingress
 - [ ] `[CORE]` Zero-downtime migrations with expand/contract
 - [ ] `[CORE]` HPA (CPU, requests per second) and KEDA (queue length, consumer lag)
@@ -841,7 +881,7 @@ Later stages add their own events; the full list is in the **Event catalog**.
 - [ ] `[CORE]` Deploy to a real VPS or cloud
 - [ ] `[OPT]` GitOps with ArgoCD
 
-**Concepts:** declarative deployment, rolling updates, autoscaling, expand/contract migrations, backup and restore.
+**Concepts:** declarative deployment, rolling / blue-green / canary and rollback, autoscaling and load balancing, stateless vs stateful, high availability, SPOF, failover, leader election, secret management and rotation, Infrastructure as Code, immutable infrastructure, expand/contract migrations, backup and restore.
 **Done when:** the whole shopStack (core, every service, workers) deploys to staging through one pipeline and is promoted to production after approval; a migration runs with zero downtime under load; a restore from backup is proven on a fresh cluster.
 
 ---
@@ -977,6 +1017,215 @@ Later stages add their own events; the full list is in the **Event catalog**.
 
 ---
 
+# Part II: ERP extension (stages 26–33)
+
+Part I builds a retail SaaS. What separates it from an ERP is that an ERP closes the loop on **money, materials and people**: every document posts to a general ledger, purchasing is driven by a plan instead of by hand, production turns materials into products, payroll turns time into cost, and all of it is reported from one source of truth. Part II adds exactly that.
+
+Rules for part II:
+- Start only after the `[CORE]` part of levels 1–3. Nothing here is needed for a job search.
+- Every module lives in the **monolith**: each one writes to the same ledgers and stock as sales and must do it in the same transaction. Extraction follows the same conditions as part I.
+- Each stage reuses the state machine, ledger, approval and audit machinery of part I. Stage 30 extracts the generic mechanism and migrates the older modules to it.
+- The same domain rules apply: `Decimal` money, immutable documents, snapshots, ledgers, state machines, audit, `tenant_id` everywhere.
+
+| Stage | Prerequisites | What it adds |
+|---|---|---|
+| 26 General ledger and accounting | 8 | Chart of accounts, posting rules, periods, financial statements, multi-currency, bank reconciliation |
+| 27 Installment sales, consumer credit and gift cards | 7, 26 | Contracts, schedules, collections, liability ledgers |
+| 28 Production | 4, 26 | BOM, work orders, WIP, product cost |
+| 29 Demand planning and replenishment | 4, 16 | Forecast, reorder point, suggested POs and transfers |
+| 30 Workflow, approvals and document engine | 5, 11 | Generic state machines, configurable approvals, numbering |
+| 31 HR and payroll | 11, 26 | Attendance, compensation, payroll runs, payroll accounting |
+| 32 Reporting, documents and localization | 23, 26 | Templates, PDF, report engine, exports, i18n |
+| 33 Multi-company and intercompany | 26, 30 | Legal entities inside a tenant, intercompany, consolidation |
+
+---
+
+## Stage 26: General ledger and accounting
+**Where:** `modules/accounting` · **Prerequisites:** 8
+
+**Why (ADR):** stage 8 reports revenue and profit from sale snapshots. An ERP needs the opposite direction too: every document (sale, receipt, payment, adjustment, payroll) produces balanced journal entries, and every financial report is derived from the ledger, not from the documents. That is what makes the numbers auditable and lets an accountant close a month.
+
+### Chart of accounts and posting
+- [ ] `[CORE]` `Account` tree per tenant (code, type: asset / liability / equity / income / expense, currency, active), seeded from a template for the tenant's tax regime; an account with entries can't be deleted
+- [ ] `[CORE]` `JournalEntry` and `JournalLine`: debit = credit enforced by a deferred constraint trigger; entries are immutable, mistakes are fixed with a reversing entry (the stage 8 `[EXT]` becomes `[CORE]` here)
+- [ ] `[CORE]` **Posting rules as data:** document type × event → accounts (sale: cash or receivable vs revenue and VAT, COGS vs inventory; receipt: inventory vs payable; payment; adjustment; refund). The posting engine is a pure function, like the pricing engine
+- [ ] `[CORE]` Posting happens in the **same transaction** as the document; a document that can't post can't complete. ADR: synchronous posting vs posting from events, and why the synchronous side wins for money
+- [ ] `[CORE]` Backfill: post every existing part I document; the ledger's revenue must equal the stage 8 report to the tiyin
+- [ ] `[CORE]` Sub-ledgers reconcile to the GL: receivables (stage 7), payables (stage 4), inventory value (stage 4 WAC), cash per location (stage 8); a nightly reconciliation job and a differences report
+
+### Periods and reports
+- [ ] `[CORE]` Fiscal periods: `open → closing → closed`; posting into a closed period is rejected at the database level; reopening needs a permission and an audit record
+- [ ] `[CORE]` Trial balance, general ledger per account, profit and loss, balance sheet; by period, location and cost centre; every report is a `SELECT` over the ledger
+- [ ] `[CORE]` Year-end closing: income and expense accounts closed to retained earnings with generated entries
+- [ ] `[CORE]` VAT: output and input VAT accounts, a VAT return report for the period (check the current rules for Uzbekistan)
+- [ ] `[CORE]` Property-based tests (`hypothesis`): any sequence of documents leaves the trial balance balanced
+
+### Multi-currency, banks and assets
+- [ ] `[CORE]` **Multi-currency:** base currency per tenant, exchange rates with validity dates (source plus manual override), amounts stored in document currency and base currency, realised and unrealised FX gain/loss entries
+- [ ] `[CORE]` Bank accounts, bank statement import (CSV or MT940-style; ADR on the format), **bank reconciliation:** matching statement lines to payments, suggested matches, unmatched items
+- [ ] `[EXT]` Fixed assets: register, depreciation methods (straight-line, declining balance), a monthly depreciation run (Celery beat), disposal
+- [ ] `[EXT]` Budgets per account and period, budget vs actual report
+- [ ] `[EXT]` Cost centres and analytical dimensions on lines (location, channel, project)
+- [ ] `[OPT]` Export to an external accounting system (1C) as journal entries
+
+**Concepts:** double-entry bookkeeping, chart of accounts, posting rules, sub-ledger reconciliation, fiscal periods and closing, multi-currency and FX differences, bank reconciliation.
+**Done when:** for any month the trial balance balances, the P&L equals the stage 8 gross profit report, every sub-ledger reconciles to the GL, and a closed period rejects writes even from a raw SQL session without the override role.
+
+---
+
+## Stage 27: Installment sales, consumer credit and gift cards
+**Where:** `modules/credit` · **Prerequisites:** 7, 26
+
+**Why (ADR):** in Uzbekistan a large share of electronics, furniture and appliances is sold in instalments (nasiya). Stage 7 has a credit limit and a debt ledger; an ERP needs a contract with a schedule, markup or interest, penalties, collections, and the accounting behind it. Gift cards are the mirror image: money received before goods, a liability tracked per card.
+
+### Installment contracts
+- [ ] `[CORE]` `InstallmentContract`: linked to a sale, down payment, term, markup or interest (ADR: markup on price vs interest on balance; rounding so the schedule sums exactly), guarantor, documents (through Media)
+- [ ] `[CORE]` Schedule generation: `InstallmentPayment` rows with due dates in the tenant's time zone; the schedule sums to the contract total to the tiyin (largest remainder, as in stage 6)
+- [ ] `[CORE]` Contract state machine: `draft → pending_approval → active → completed / defaulted / cancelled`; approval by amount and customer risk; `credit.contract.approve` permission
+- [ ] `[CORE]` Repayments: full, partial and early (early repayment recalculates the markup, ADR); allocation order (penalty → markup → principal); payment from the POS, bank or balance; every repayment is a ledger entry and a journal entry
+- [ ] `[CORE]` Overdue detection (Celery beat, tenant time zone), penalties as configured, `installment.overdue.v1` → reminders through Notification; escalation steps
+- [ ] `[CORE]` Exposure limit per customer: payment history with this tenant, open exposure; new contracts above the limit are blocked with the same account-row lock as stage 7
+- [ ] `[CORE]` Collections dashboard: overdue by bucket, location and collector; a customer's full statement
+- [ ] `[EXT]` Repossession or return of goods under a defaulted contract: stock movement, write-off entry
+- [ ] `[EXT]` Layaway (goods held until fully paid): a reservation with a long TTL plus a schedule
+- [ ] `[OPT]` An external BNPL provider behind an adapter (stage 19 pattern)
+
+### Gift cards and vouchers
+- [ ] `[CORE]` Gift card as a **liability ledger:** issue (sale of a card is unearned revenue), redeem (a payment method at the POS and online), balance from entries, expiry policy, a breakage entry on expiry
+- [ ] `[CORE]` Card codes hashed at rest, activation, blocking; redeem concurrency: two terminals can never spend the same balance twice
+- [ ] `[EXT]` Physical vs electronic cards, bulk issue for corporate customers
+
+**Concepts:** amortisation schedule, allocation order, exposure limits, collections, liability ledgers, breakage.
+**Done when:** a contract is sold, repaid partially, goes overdue, is penalised and completed, and at every step the customer statement, the credit ledger and the GL agree; two parallel repayments, or two parallel gift-card redemptions, never produce a negative balance.
+
+---
+
+## Stage 28: Production (light manufacturing)
+**Where:** `modules/production` · **Prerequisites:** 4, 26
+
+**Why (ADR):** retailers produce: a bakery, a deli counter, a furniture shop assembling sets, a pharmacy compounding. Stage 2's kit assembly is single-level and instantaneous. Production adds a bill of materials with levels, work orders that take time, work-in-progress stock, scrap and a real product cost.
+
+- [ ] `[CORE]` **Bill of materials (BOM):** versioned, multi-level, quantities in `Decimal(12, 3)`, scrap percentage, optional by-products; cycle detection in the BOM graph
+- [ ] `[CORE]` `WorkOrder` state machine: `draft → planned → released → in_progress → completed / cancelled`; partial completion
+- [ ] `[CORE]` Material consumption: reservation on release, `production_consume` movements on start or on completion (ADR: backflush vs manual issue); FEFO for batches
+- [ ] `[CORE]` Output: a `production_output` movement into stock with a new batch; by-products; scrap as a separate movement with a reason
+- [ ] `[CORE]` **Work-in-progress:** a WIP account in the GL; consumption posts to WIP, completion posts from WIP to inventory; product cost is materials plus allocated labour and overhead (rate per hour, ADR); variance vs the BOM standard cost reported
+- [ ] `[CORE]` Availability check before release ("can I make 50 cakes today?"); the shortage report feeds stage 29
+- [ ] `[EXT]` Routing and operations (steps, work centres, durations); a capacity view per work centre
+- [ ] `[EXT]` Disassembly (a reverse work order)
+- [ ] `[OPT]` Production planning from the sales forecast (stage 29); recipes with yield by weight
+
+**Concepts:** BOM explosion, WIP accounting, backflushing, standard vs actual cost, by-products and scrap.
+**Done when:** a multi-level BOM is produced end to end; components, WIP, finished stock and the GL agree; the finished product's cost equals materials plus overhead, and the stage 3 reconciliation still passes.
+
+---
+
+## Stage 29: Demand planning and replenishment (MRP-lite)
+**Where:** `modules/planning` · **Prerequisites:** 4, 16
+
+**Why (ADR):** part I reorders when stock falls below a hand-set minimum. An ERP computes what to buy from forecast demand, lead times and what is already on order, across locations. This module turns inventory from a record into a plan.
+
+- [ ] `[CORE]` Demand forecast per variant and location from the Analytics read models (moving average, exponential smoothing, a weekday profile for seasonality); ADR: where the computation runs and how the result returns to the core as data
+- [ ] `[CORE]` Replenishment parameters: lead time per supplier and variant, safety stock, review period, minimum order quantity, pack size, maximum stock
+- [ ] `[CORE]` **Reorder point and order quantity:** `reorder_point = demand × lead_time + safety_stock`; projected stock = on hand − reserved + on order (open POs and transfers) − forecast; a suggestion when projected stock crosses the reorder point
+- [ ] `[CORE]` Suggested purchase orders grouped by supplier, respecting MOQ and pack size; one click creates draft POs (stage 4); `replenishment.suggested.v1`
+- [ ] `[CORE]` Multi-location: transfer suggestions from a location with excess to one with shortage before buying
+- [ ] `[CORE]` The planning run is a Celery beat job per tenant under a distributed lock; the result is a snapshot with a run ID, so two runs never mix
+- [ ] `[CORE]` Exception report: stock-outs, overstock, dead stock, forecast error (MAPE) per product
+- [ ] `[EXT]` Promotion-aware forecast (the stage 6 calendar lifts demand)
+- [ ] `[EXT]` Open-to-buy budget per category and period
+- [ ] `[OPT]` Suggested POs visible to the supplier as a forecast (stage 24)
+
+**Concepts:** forecasting basics, reorder point, safety stock, projected inventory, exception-based management.
+**Done when:** on seeded history the planning run proposes POs that would have avoided the seed's stock-outs, and never proposes buying what is already on order.
+
+---
+
+## Stage 30: Workflow, approvals and document engine
+**Where:** `modules/workflow` · **Prerequisites:** 5, 11
+
+**Why (ADR):** by now the project has eight state machines and four approval flows, each written by hand. An ERP lets the tenant configure approvals and numbering without code. This stage extracts the common mechanism and migrates the old modules to it. It is also the biggest refactoring exercise in the project.
+
+- [ ] `[CORE]` A generic **state machine framework:** states, transitions, guards and effects declared per document type; `transition()` logs every change with actor, reason and correlation ID; a test forbids direct status writes
+- [ ] `[CORE]` Migrate the existing machines (sale, PO, transfer, order, contract, work order) to it, one PR each, behaviour unchanged (**characterisation tests** first)
+- [ ] `[CORE]` **Approval workflows as data:** steps, approver by role or user, thresholds by amount or percentage, parallel vs sequential, delegation while on leave, escalation by timeout (Celery beat); the stage 5 step-up PIN becomes one step type
+- [ ] `[CORE]` Document numbering: configurable sequences per document type and location (prefix, yearly reset); gapless where required (the stage 5 counter row) and not where not (ADR on the cost)
+- [ ] `[CORE]` Inbox: "documents waiting for me", with notifications through the Notification service
+- [ ] `[CORE]` Workflow configuration is a sensitive operation; changing a workflow never affects documents already in flight (the version is pinned on the document)
+- [ ] `[EXT]` Reminders and SLA timers per step; a report of approval lead times
+- [ ] `[OPT]` A visual workflow editor in the back-office (HTMX)
+
+**Concepts:** generic state machines, configuration over code, refactoring under test, characterisation tests, versioned configuration.
+**Done when:** every document type in the project runs on the framework, every old test still passes, and a tenant adds a second approval step to purchase orders above an amount without a deploy.
+
+---
+
+## Stage 31: HR and payroll
+**Where:** `modules/hr`, `modules/payroll` · **Prerequisites:** 11, 26
+
+**Why (ADR):** stage 11 was deliberately minimal. An ERP pays people: schedules and attendance become hours, hours and sales become pay, pay becomes journal entries and tax reports. Payroll rules change with the law, so the calculation must be data-driven and versioned.
+
+- [ ] `[CORE]` Work schedules and attendance become `[CORE]`: shifts per location, check-in and check-out from the POS (linked to the cash shift), overtime and absence types, leave balances as a ledger
+- [ ] `[CORE]` Compensation: salary, hourly, commission from sales (from sale snapshots, by cashier), bonuses; effective-dated changes
+- [ ] `[CORE]` **Payroll run** per period: `draft → calculated → approved → paid → posted`; the calculation is a pure function over versioned rule sets (income tax, social contributions; check the current Uzbek rules and keep them as data with validity dates); recalculation is idempotent
+- [ ] `[CORE]` Payslips (PDF through stage 32), payment through finance (stage 8) and a bank export file; `payroll.posted.v1`
+- [ ] `[CORE]` Journal entries: salary expense, taxes payable, net pay payable; posted to the GL in the same transaction as approval
+- [ ] `[CORE]` Privacy: salary data behind a separate permission, masked in logs, never in analytics events in raw form
+- [ ] `[EXT]` Cashier KPIs feed bonuses; shortage deductions from cash differences (stage 5) by policy
+- [ ] `[EXT]` Employee self-service: payslips, leave requests through the approval engine (stage 30)
+- [ ] `[OPT]` Extraction into a Django service (the stage 11 `[OPT]`), now with real scope
+
+**Concepts:** effective dating, versioned rule sets, payroll accounting, privacy by permission.
+**Done when:** a payroll run for a month with overtime, commission and leave produces payslips, a bank file and balanced journal entries; rerunning the calculation gives identical results.
+
+---
+
+## Stage 32: Reporting, documents and localization
+**Where:** `modules/reporting`, `modules/documents` · **Prerequisites:** 23, 26
+
+**Why (ADR):** an ERP's output is documents and reports: invoices, contracts, payslips, statements, and reports an accountant can schedule and export. Each tenant needs them in its own language, format and layout.
+
+### Documents
+- [ ] `[CORE]` Document templates per tenant and type (receipt, invoice, PO, contract, payslip, statement): Jinja2 templates with a versioned schema of variables; a rendered document is stored as a snapshot in Media and never re-rendered
+- [ ] `[CORE]` PDF rendering in a worker (library by ADR; fonts for Latin and Cyrillic), barcodes and QR codes on documents
+- [ ] `[CORE]` Numbering and verification: document number from stage 30; an optional signature or hash printed on the document for verification
+- [ ] `[EXT]` Delivery of documents by email and Telegram through Notification, with Media links
+
+### Reporting engine
+- [ ] `[CORE]` Report definitions as data: parameters (period, location, dimensions), a whitelisted query or a read-model source, output columns; large reports run asynchronously with progress (the stage 9 pattern)
+- [ ] `[CORE]` Scheduled reports (Celery beat, tenant time zone) delivered as files through Media and Notification
+- [ ] `[CORE]` Exports: CSV, XLSX and a format for 1C; streaming for large results, never loading everything into memory
+- [ ] `[CORE]` Row-level security on reports: a branch manager sees only their locations, finance sees all; the same permission layer as the API
+- [ ] `[EXT]` A data export API for BI tools (cursor pagination, incremental `updated_since`)
+- [ ] `[OPT]` Pivot-style ad-hoc reports in the back-office
+
+### Localization
+- [ ] `[CORE]` Interface locales uz-Latn, uz-Cyrl and ru (gettext or a catalogue; ADR); number, date and currency formatting per tenant; documents and notifications in the customer's locale
+- [ ] `[CORE]` Multi-language catalog: product names and descriptions per locale with fallback; search works across locales (stage 10 transliteration)
+- [ ] `[EXT]` Tenant-specific tax and receipt format rules as configuration (started in stage 1), not code
+
+**Concepts:** templating with versioned contracts, asynchronous report execution, streaming exports, i18n and l10n.
+**Done when:** an invoice, a payslip and a statement render in all three locales from templates a tenant customised; a scheduled report for the largest tenant runs without memory growth and arrives by Telegram.
+
+---
+
+## Stage 33: Multi-company and intercompany
+**Where:** `modules/accounting`, `modules/inventory` · **Prerequisites:** 26, 30
+
+**Why (ADR):** a tenant is a business, but a business can be several legal entities: a chain with one company per region, a franchise, a group with a wholesale arm and a retail arm. Each entity has its own books and VAT, yet they share a catalog, customers and staff. This is the last step from "shop software" to "ERP".
+
+- [ ] `[CORE]` `Company` inside a tenant: legal entity details, base currency, its own chart of accounts (from the tenant template), fiscal calendar; every location belongs to one company; every document and journal entry carries `company_id`
+- [ ] `[CORE]` Permissions and reports are company-aware; a user may have access to several companies; `404` across companies within a tenant, the same fail-closed pattern as for tenants
+- [ ] `[CORE]` **Intercompany transfer:** a transfer between locations of different companies becomes a sale in one and a receipt in the other at a transfer price, with mirrored journal entries and intercompany receivable and payable accounts; both documents in one transaction
+- [ ] `[CORE]` Consolidation: group reports that eliminate intercompany balances; by period and currency
+- [ ] `[EXT]` Franchise mode: a franchisee company sees only its own books, the franchisor sees all and charges royalties as generated invoices
+- [ ] `[OPT]` Separate Postgres schemas or databases per company (ADR: when tenant-level RLS is not enough; the cost of a second isolation axis)
+
+**Concepts:** legal entity vs business unit, intercompany accounting, consolidation and elimination, a second isolation axis.
+**Done when:** a transfer between two companies of one tenant produces matching entries on both sides, the consolidated report eliminates them, and each company's trial balance still balances on its own.
+
+---
+
 # Conditions for extracting a microservice
 
 Before extracting any module, **all** of these must be true:
@@ -995,36 +1244,101 @@ Before extracting any module, **all** of these must be true:
 ## Python internals
 **When:** during stages 1–9. **Source:** *Fluent Python* (Luciano Ramalho)
 
-- [ ] Decorators and closures
-- [ ] Context managers and `contextvars`
-- [ ] Generators and the iterator protocol
+- [ ] Decorators and closures (how `Depends`, `@router.get` and `@task` work)
+- [ ] Context managers and `contextvars` (Unit of Work, tenant context)
+- [ ] Iterables, iterators, generators; list, dict and set comprehensions; generator-based streaming for exports
+- [ ] Mutable default arguments, duck typing, EAFP vs LBYL, MRO and `super()`, dunder methods
+- [ ] Dataclass vs Pydantic model vs SQLAlchemy model: which one where in this project, and why
 - [ ] Descriptors (how SQLAlchemy columns and Pydantic fields work)
 - [ ] Metaclasses and `__init_subclass__` (how SQLAlchemy declarative and Pydantic models are created)
-- [ ] The GIL: when threads, processes and async fit
-- [ ] asyncio: event loop, coroutines, tasks, blocking calls, `run_in_executor` (**from stage 0**, the project is async)
-- [ ] Memory management: reference counting, garbage collector
-- [ ] Typing: generics, Protocol
+- [ ] The GIL: threads vs processes vs asyncio; I/O-bound vs CPU-bound; concurrency vs parallelism; `run_in_executor` and a process pool for image processing (stage 23)
+- [ ] asyncio: event loop, coroutines, tasks, blocking calls, cancellation (**from stage 0**, the project is async)
+- [ ] Memory management: reference counting, the cyclic garbage collector, circular references, `tracemalloc`
+- [ ] Typing: generics, Protocol, `TypedDict`, mypy strict vs pyright; monkey patching, and why `patch` is a smell when a fake exists
+- [ ] Packaging: venv, uv vs poetry and pipenv (the stage 0 choice), lock files, wheel vs sdist, building the app as a wheel inside the Docker image
 
 ## PostgreSQL internals
 **When:** during stages 3–10
 
 - [ ] MVCC: row versions, snapshots
-- [ ] Lock types: row, table, advisory; `pg_locks`, `pg_stat_activity`
+- [ ] Isolation levels in Postgres: snapshot isolation, serializable snapshot isolation (SSI), which anomalies each level allows (the stage 5 lab)
+- [ ] Lock types: row, table, advisory; `pg_locks`, `pg_stat_activity`; deadlock detection
+- [ ] The planner: statistics, `ANALYZE`, join strategies (nested loop, hash, merge), why an index gets ignored
+- [ ] Normal forms, and when to denormalize on purpose
 - [ ] VACUUM, autovacuum, bloat
-- [ ] WAL and checkpoints
-- [ ] Replication: streaming and logical
+- [ ] WAL and checkpoints (what durability actually costs)
+- [ ] Replication: streaming and logical; read replicas and lag; failover
 
 ## System design at scale
 **When:** from stage 10. **Source:** *Designing Data-Intensive Applications* (Martin Kleppmann)
 
 - [ ] Storage engines (B-tree vs LSM-tree)
-- [ ] Replication and consistency models
-- [ ] Sharding and consistent hashing
-- [ ] CAP and PACELC
+- [ ] Replication and consistency models: strong vs eventual, read-your-writes
+- [ ] Sharding and consistent hashing; hotspots and hot keys
+- [ ] CAP theorem, partition tolerance and PACELC
+- [ ] Consensus and leader election (Raft; Kafka KRaft; a Kubernetes lease)
+- [ ] High availability: single points of failure, failover, load balancers, stateless vs stateful services
+- [ ] Flow control: backpressure, thundering herd, bulkheads, graceful degradation
 - [ ] Stream processing
 - [ ] CDN and multi-region architecture
 - [ ] Paper design exercises: URL shortener, chat, taxi service
 - [ ] Design doc: "How does my project work with 100× more tenants?"
+
+## Software design
+**When:** from stage 2, revisited at stages 13 and 30. **Source:** *Architecture Patterns with Python* (Percival, Gregory)
+
+- [ ] Service layer, repository pattern, Unit of Work: what each one isolates and what it costs (the stage 0 ADR)
+- [ ] Dependency injection and inversion of control: FastAPI `Depends` vs a container; why the pricing engine takes its rules as arguments
+- [ ] SOLID with one example from this project per principle: SRP (sale completion vs receipt rendering), OCP (a new promotion type without touching the engine), LSP (every `PaymentProvider` fake passes the same contract test), ISP (small adapter interfaces in stage 19), DIP (modules depend on interfaces, enforced by `import-linter`)
+- [ ] DRY, KISS, YAGNI and their limits: when duplication is cheaper than the wrong abstraction
+- [ ] Coupling and cohesion, separation of concerns; module boundaries and bounded contexts (stage 13)
+- [ ] Code smells, technical debt, boilerplate; refactoring under tests (stage 30 is the big one)
+- [ ] Domain model: entities, value objects (`Money`), aggregates (a sale and its lines); invariants kept in one transaction
+- [ ] Hexagonal architecture, ports and adapters, clean architecture: how the stage 19 adapters and the pure engines fit; what this project deliberately doesn't do
+- [ ] CQRS (the stage 16 read models) and event sourcing: an ADR on why the ledgers are append-only but the project is not event-sourced
+
+## Web and API design
+**When:** stages 0, 1, 9, 17
+
+- [ ] Request lifecycle: ASGI, middleware order, dependencies, exception handlers, response serialization
+- [ ] REST vs RPC vs GraphQL: resource design, status codes, error format; when a command endpoint beats a resource
+- [ ] Serialization and validation: Pydantic v2 (strict mode, `Decimal`), DRF serializers
+- [ ] Versioning, backward compatibility, breaking changes: a URL version for the API, a schema version for events
+- [ ] Rate limiting vs throttling: fixed window, sliding window, token bucket; where to enforce (edge, app, outbound)
+- [ ] Push options: polling, long polling, SSE, WebSocket, webhooks; chosen per use case in stages 9, 17, 18, 19
+- [ ] CORS and preflight; cookies vs bearer tokens and what that changes for CSRF
+
+## Testing
+**When:** from stage 0
+
+- [ ] The test pyramid: unit (the pure engines of stages 6, 26, 31), integration (Testcontainers, real Postgres and Redis), end-to-end (Playwright, stage 18), smoke and synthetic checks (stage 20), a regression test for every bug
+- [ ] Test doubles: fake (an in-memory adapter), stub (fixed answers), mock and spy (assert calls), `patch`; when each one is right, and why fakes for ports are the default here
+- [ ] Fixtures: scope, factories (factory_boy in Django, your own in FastAPI), transaction rollback per test, `dependency_overrides`
+- [ ] Coverage as a signal, not a target; mutation testing `[OPT]`
+- [ ] Flaky tests: time, ordering, shared state, real clocks; freezing time and seeded randomness
+- [ ] Contract tests (Pact) between services; property-based tests (`hypothesis`)
+- [ ] Load, stress and soak tests (Locust); benchmarks with before/after numbers in the README
+
+## Security
+**When:** stage 1, then every stage that adds an entry point. **Source:** OWASP Top 10, OWASP ASVS
+
+- [ ] Authentication vs authorization; sessions vs tokens; access and refresh tokens, rotation and reuse detection
+- [ ] RBAC vs ABAC; least privilege for users, service tokens and database roles
+- [ ] OAuth 2.0 and OIDC: flows, when to integrate an identity provider; JWT pitfalls (`alg`, audience, clock skew), JWKS rotation
+- [ ] Password and secret hashing: Argon2, salting, pepper; OTP and PIN hashing with attempt limits
+- [ ] Injection (SQL, command), XSS and CSP, CSRF, SSRF, open redirects, mass assignment; one test per class of attack in the project
+- [ ] Secret management and rotation; encryption at rest (envelope encryption, stage 25); PII in logs
+- [ ] Threat modelling of one flow (refund) and one boundary (supplier portal)
+
+## Django and ORM
+**When:** stages 15, 22, 24
+
+- [ ] Django ORM vs SQLAlchemy: `QuerySet` laziness, `select_related` (JOIN) vs `prefetch_related` (second query) vs `selectinload` / `joinedload`; the N+1 helper works in both
+- [ ] `annotate`, `aggregate`, `F` and `Q` expressions, `Subquery`; raw SQL and `RunSQL` migrations
+- [ ] Migrations: Django `makemigrations` / `migrate` vs Alembic autogenerate; expand/contract in both
+- [ ] Signals: what they are, and why this project puts side effects in the service layer instead
+- [ ] WSGI vs ASGI for Django; where sync is fine (stages 15, 22, 24)
+- [ ] DRF: serializers, ViewSets, permission classes, throttling, pagination; the ADR comparing them with Pydantic and FastAPI dependencies
 
 ## Networking and Linux
 **When:** throughout the project, especially in stages 0, 12, 18 and 21
@@ -1057,6 +1371,181 @@ Before extracting any module, **all** of these must be true:
 - [ ] A "decision story" for every technology: why, the alternative, the cost
 - [ ] Mock interviews: coding and system design
 - [ ] 3–5 technical articles: deadlocks, multi-tenancy with RLS, the promotions engine, offline sync, the outbox pattern
+- [ ] Code review vocabulary in practice: `nit:` vs `blocker:` prefixes, LGTM only after running the code; a review checklist in `.github/PULL_REQUEST_TEMPLATE.md`
+- [ ] An **RFC** (request for comments) in `docs/rfc/` before every big change; the first one: Kafka vs RabbitMQ for domain events (stage 13)
+- [ ] A time-boxed **spike** (proof of concept) before every unfamiliar technology (ClickHouse, PostGIS, PWA); the result is a decision, the code is thrown away
+- [ ] Every PR description names the happy path, the edge cases, the fallback, the trade-offs and the **blast radius** of the change
+- [ ] Postmortems find the root cause with "5 whys"; action items are tracked to completion
+
+---
+
+# Concept index
+
+Every term an interviewer may ask, mapped to where this roadmap teaches it. A stage number means the task where the concept is used for real; "track" means a theory track above. Tick a term only when you can explain it with an example **from this project**: why, the alternative, and the cost.
+
+## 1. Database and SQL
+
+| Term | Where |
+|---|---|
+| ACID: atomicity, consistency, isolation, durability; transaction, commit, rollback, savepoint | Stage 5 (completion, ACID lab), stage 0 Unit of Work; PostgreSQL track (WAL) |
+| N+1 query problem, lazy loading, eager loading (`selectinload`, `joinedload`) | Stage 10; Django track (`select_related`, `prefetch_related`) |
+| Join: INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN; semi and anti joins | Stage 10 SQL lab; PostgreSQL track (join strategies) |
+| Index, composite index, covering index, partial, BRIN, GIN; full table scan; query plan, execution plan | Stage 2 (sub-10 ms lookup), stage 10 `EXPLAIN` |
+| Normalization, denormalization | Stage 10 summary tables; PostgreSQL track |
+| Primary key, foreign key, unique constraint, `CHECK` | Stages 1–3 models; stage 13 (removing cross-module FKs) |
+| Upsert | Stage 9 import |
+| Locking: pessimistic, optimistic; deadlock; race condition; lost update | Stage 3 reservations, stage 5 concurrency lab, stage 7 credit limit |
+| Isolation levels: read uncommitted, read committed, repeatable read, serializable; dirty, non-repeatable and phantom reads | Stage 5 isolation lab; PostgreSQL track (MVCC, SSI) |
+| Replication, read replica | Stage 10 `[EXT]`, stage 21 failover; PostgreSQL track |
+| Sharding, partitioning | Stage 10 (table partitioning), stage 13 (Kafka partitions); system design track (sharding) |
+| Materialized view | Stage 10, stage 16 (ClickHouse) |
+| Cursor pagination vs offset pagination | Stage 3 movement history, stage 10 |
+| Connection pool | Stage 10 (PgBouncer, SQLAlchemy pool) |
+
+## 2. Distributed systems and backend
+
+| Term | Where |
+|---|---|
+| Idempotency, idempotency key | Stages 5, 12, 14, 17, 25 |
+| Retry, exponential backoff (and jitter), timeout | Stage 9 Celery, stage 14, stage 19 adapters |
+| Circuit breaker, bulkhead, graceful degradation | Stage 19, stage 25 |
+| At-most-once, at-least-once, exactly-once semantics | Stage 13 ADR, stage 14 consumer, stage 16 projections |
+| Eventual consistency, strong consistency | Architecture "what lives where", stage 12 offline, stage 15 tenant replica |
+| CAP theorem, partition tolerance, PACELC | System design track |
+| SLA, SLO, SLI, error budget | Stage 20 |
+| Backpressure, thundering herd, hotspot, hot key | Stage 9 (prefetch, stampede), stage 10 hotspots; system design track |
+| Single point of failure (SPOF), high availability, failover | Stage 21 HA |
+| Leader election, consensus | Stage 21 singletons, stage 9 distributed lock; system design track (Raft, KRaft) |
+
+## 3. API and web
+
+| Term | Where |
+|---|---|
+| REST, RPC, GraphQL, CRUD, endpoint | Stage 1 API standards, stage 17 ADR; web and API track |
+| Serialization, deserialization, schema, validation | Stage 0 Pydantic, stage 13 event schemas, stage 15 DRF serializers |
+| Rate limiting vs throttling | Stage 1 (sliding window), stage 15 (DRF throttling), stage 25 (token bucket) |
+| Pagination, filtering, sorting | Stage 10 |
+| Versioning, backward compatibility, breaking change | Stage 1 `/api/v1/`, stage 13 event versions, stage 17 public API |
+| Webhook, polling, long polling, WebSocket, SSE (server-sent events) | Stage 9 `[EXT]`, stages 15 and 17 (payment webhooks), stage 18 (tracking), stage 19 (outbound webhooks) |
+| CORS, preflight request | Stage 0 middleware, stage 17 storefront |
+| Middleware, request lifecycle | Stage 0, stage 1 tenant middleware; web and API track |
+
+## 4. Caching
+
+| Term | Where |
+|---|---|
+| Cache hit, cache miss, TTL (time to live), cache invalidation | Stage 9 |
+| Cache-aside, write-through, write-back | Stage 9 ADR |
+| Cache stampede, warm-up, eviction policy, LRU, LFU | Stage 9 |
+| HTTP caching (`ETag`, `Cache-Control`), CDN | Stage 17, stage 23 |
+
+## 5. Message brokers and queues
+
+| Term | Where |
+|---|---|
+| Message queue vs event stream, broker, producer, consumer | Stage 9 (RabbitMQ), stage 13 (Kafka); architecture notes ("RabbitMQ carries work, Kafka carries facts") |
+| Pub/sub, topic, partition, offset, consumer group, ordering | Stage 13, stage 16 (offset commit, replay), stage 9 (Redis pub/sub) |
+| Ack (acknowledgement), requeue, dead letter queue (DLQ), poison message | Stage 9 Celery, stage 14 Notification |
+| Outbox pattern, inbox pattern | Stage 13 |
+| Saga pattern: orchestration vs choreography | Stage 15 (provisioning), stage 18 (failed delivery) |
+
+## 6. Architecture and design
+
+| Term | Where |
+|---|---|
+| Monolith, modular monolith, microservice | Stage 0 ADR, stage 13, "Conditions for extracting a microservice" |
+| Service layer, repository pattern, Unit of Work | Stage 0; software design track |
+| Dependency injection (DI), inversion of control (IoC) | Stage 0 (`Depends`), stage 1 permissions; software design track |
+| SOLID: single responsibility, open/closed, Liskov substitution, interface segregation, dependency inversion | Software design track, with an example from stages 6 and 19 per principle |
+| DRY, KISS, YAGNI, separation of concerns | Software design track |
+| Coupling, cohesion, code smell, technical debt, refactoring, boilerplate | Stage 13 (`import-linter`), stage 30 (refactoring under test); software design track |
+| Domain model, bounded context | Stage 13 module boundaries; software design track |
+| CQRS, event sourcing | Stage 16 read models; software design track (ADR on why not event sourcing) |
+| Hexagonal architecture, ports and adapters, clean architecture | Stage 19 adapters; software design track |
+
+## 7. Python
+
+| Term | Where |
+|---|---|
+| GIL (global interpreter lock), threading, multiprocessing, concurrency vs parallelism, I/O-bound vs CPU-bound | Python track; stage 9 (sync workers), stage 23 (image processing) |
+| async, await, coroutine, event loop | Stage 0 onwards; Python track |
+| Context manager, decorator, closure, generator, iterator, iterable, list comprehension, dict comprehension, set comprehension | Python track; stage 0 Unit of Work, stage 1 permission dependencies |
+| Mutable default argument, duck typing, EAFP vs LBYL, MRO (method resolution order), dunder methods | Python track |
+| Dataclass, Pydantic, type hinting, static typing, mypy, pyright, Protocol | Stage 0 (mypy strict); Python track |
+| Monkey patching, descriptor, metaclass | Python track |
+| Garbage collection (GC), reference counting, circular reference | Python track; stage 10 profiling |
+| Virtual environment (venv), uv vs poetry and pipenv, wheel, source distribution (sdist) | Stage 0; Python track |
+
+## 8. Django, ORM and web frameworks
+
+| Term | Where |
+|---|---|
+| ORM (object-relational mapping), migration | Stage 0 (SQLAlchemy, Alembic), stage 15 (Django ORM), stage 22 (`RunSQL`) |
+| QuerySet, `select_related`, `prefetch_related`, annotation, aggregation | Stages 15, 22, 24; Django track (compared with SQLAlchemy) |
+| Signal | Django track (why this project avoids them) |
+| ASGI, WSGI | Stage 0 ADR; Django track |
+| Dependency override, serialization layer | Stage 0 tests; stage 15 ADR (DRF serializers vs Pydantic) |
+
+## 9. Testing
+
+| Term | Where |
+|---|---|
+| Unit test, integration test, end-to-end test (E2E), smoke test, regression test | Stage 0 pyramid, stage 18 (Playwright), stage 20 (synthetic checks); testing track |
+| Fixture, mock, stub, fake, spy, patch | Stage 0, stage 19 fakes; testing track |
+| Test coverage, flaky test | Stage 0 CI; testing track |
+| Contract test | Stages 16, 18, 24 (Pact) |
+| Load test, stress test, benchmark | Stage 5 (Locust), stage 10 (before/after) |
+| Property-based test | Stages 6, 26, 31 |
+
+## 10. Observability and production
+
+| Term | Where |
+|---|---|
+| Logging, structured logging | Stage 13 (structlog), stage 20 |
+| Metrics, tracing, distributed tracing, correlation ID | Stage 13, stage 20 |
+| Latency, throughput, P95, P99, tail latency | Stage 20 |
+| Error budget, alert fatigue | Stage 20 |
+| Health check, liveness probe, readiness probe | Stage 0, stage 21 |
+
+## 11. DevOps and deployment
+
+| Term | Where |
+|---|---|
+| CI (continuous integration), CD (continuous delivery vs continuous deployment), build, artifact | Stage 0, stage 21 |
+| Docker, container, image | Stage 0 |
+| Orchestration, Kubernetes | Stage 21 |
+| Blue-green, canary, rolling deployment, rollback | Stage 21 |
+| Infrastructure as Code (IaC), immutable infrastructure, secret management | Stage 21 |
+
+## 12. Security
+
+| Term | Where |
+|---|---|
+| Authentication vs authorization | Stage 1 |
+| RBAC (role-based access control), ABAC (attribute-based access control) | Stage 1, stage 15 (Django groups), stage 24 |
+| OAuth 2.0, JWT, access token, refresh token, session | Stage 1, stage 15 (JWKS, impersonation); security track |
+| Hashing, salting | Stage 1 (Argon2, OTP, PIN) |
+| SQL injection, XSS, CSRF, SSRF, CSP (content security policy) | Stage 1 baseline, stage 19 (SSRF on outbound calls) |
+| Least privilege, secret rotation | Stage 1 DB roles, stage 21, stage 22 (append-only role) |
+
+## 13. Performance and reliability
+
+| Term | Where |
+|---|---|
+| Bottleneck, profiling, memory leak | Stage 10 |
+| Cold start, warm path, hot path, critical path | Stage 5 (sale completion is the hot and critical path), stage 9 (cache warm-up), stage 21 (pod start, readiness) |
+| Tail latency | Stage 20 |
+| Horizontal scaling, vertical scaling, autoscaling, load balancer | Stage 21 |
+| Sticky session, stateless, stateful | Stage 1 (sessions in Redis), stage 21 |
+
+## 14. Code review and team communication
+
+| Term | Where |
+|---|---|
+| LGTM, nit, blocker | Team section (review checklist) |
+| RFC (request for comments), PoC (proof of concept), spike, MVP (minimal viable product) | Team section; MVP line; RFC template |
+| Edge case, happy path, fallback, trade-off, blast radius | Team section (PR description); every ADR's "Consequences" |
+| Root cause, postmortem | Stage 20; postmortem template |
 
 ---
 
@@ -1105,4 +1594,27 @@ Temporary and permanent solutions.
 
 ## Action items
 - [ ] What will be done so it doesn't happen again
+```
+
+## RFC template (`docs/rfc/NNNN-name.md`)
+
+```markdown
+# RFC NNNN: title
+
+**Status:** draft / in review / accepted / rejected
+**Author and date:**
+
+## Problem
+What hurts today, with evidence (numbers, incidents, a failing test).
+
+## Proposal
+What changes, in enough detail to review. Happy path, edge cases, fallback.
+
+## Alternatives
+Each one with its trade-offs.
+
+## Blast radius and rollout
+What can break, how it rolls out, how it rolls back.
+
+## Open questions
 ```
