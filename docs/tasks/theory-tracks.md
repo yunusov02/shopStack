@@ -31,7 +31,7 @@ One task per topic. Done when you can explain the topic with an example from thi
 ## System design at scale (from stage 10, DDIA)
 
 - [ ] **TH.SD01** B-tree vs LSM-tree
-- [ ] **TH.SD02** Consistency models: strong, eventual, read-your-writes
+- [ ] **TH.SD02** Consistency models: strong, eventual, read-your-writes; ACID vs BASE
 - [ ] **TH.SD03** Sharding, consistent hashing, hotspots
 - [ ] **TH.SD04** CAP, partition tolerance, PACELC
 - [ ] **TH.SD05** Consensus and leader election (Raft, KRaft, leases)
@@ -111,3 +111,57 @@ One task per topic. Done when you can explain the topic with an example from thi
 - [ ] **TH.AL04** Trees, BFS, DFS
 - [ ] **TH.AL05** Graph basics
 - [ ] **TH.AL06** Dynamic programming basics
+
+## Data engineering (stages 34–37; Fundamentals of Data Engineering, Kimball, DDIA 10–11, Learning Spark)
+
+- [ ] **TH.DE01** OLTP vs OLAP; warehouse vs lake vs lakehouse vs mart
+- [ ] **TH.DE02** Medallion architecture: what each layer promises
+- [ ] **TH.DE03** Dimensional modelling: facts, dimensions, grain, star vs snowflake, SCD 1/2/3, surrogate and conformed keys, additivity
+- [ ] **TH.DE04** Parquet / ORC / Avro; Iceberg / Delta / Hudi: ACID on object storage, time travel, evolution
+- [ ] **TH.DE05** ETL vs ELT, batch vs streaming, incremental vs full, upsert/MERGE, idempotency, backfill
+- [ ] **TH.DE06** CDC: logical replication, Debezium, slots and WAL; outbox vs CDC
+- [ ] **TH.DE07** Orchestration: DAGs, intervals, sensors, SLAs; Airflow vs Dagster vs Prefect
+- [ ] **TH.DE08** dbt: models, refs, incremental strategies, snapshots, tests, docs, slim CI
+- [ ] **TH.DE09** Spark: architecture, lazy evaluation, plans, shuffle, skew, broadcast join, caching, UDF cost; Hadoop/HDFS history; Polars/DuckDB
+- [ ] **TH.DE10** Streaming: event vs processing time, windows, watermarks, state and checkpoints, exactly-once, backpressure; Flink vs Spark SS; Lambda vs Kappa
+- [ ] **TH.DE11** Quality and governance: dimensions, contracts, registry, evolution, dedup, quarantine, catalog, lineage, PII, warehouse RBAC, freshness SLOs
+- [ ] **TH.DE12** Cloud mapping table: MinIO/Iceberg/Spark/Airflow/Debezium ↔ AWS, GCP, Azure, Databricks, Snowflake
+
+## Machine learning (stages 38–40; Géron, Huyen, ISLR)
+
+- [ ] **TH.ML01** Learning types: supervised, unsupervised, semi-, self-supervised, reinforcement
+- [ ] **TH.ML02** Splits and CV (k-fold, stratified, time series); leakage and point-in-time correctness
+- [ ] **TH.ML03** Bias-variance, over/underfitting, regularisation (L1, L2, elastic net, early stopping), learning curves
+- [ ] **TH.ML04** Loss functions, gradient descent, optimisers (SGD, momentum, Adam, AdamW), LR schedules, batch size, epochs
+- [ ] **TH.ML05** Classical models and when: linear/logistic, trees, random forest, boosting (XGBoost, LightGBM, CatBoost), SVM, k-NN, naive Bayes; bagging/boosting/stacking
+- [ ] **TH.ML06** Clustering (k-means, DBSCAN, hierarchical) and reduction (PCA, t-SNE, UMAP)
+- [ ] **TH.ML07** Metrics: classification, regression, ranking; calibration and thresholds; when accuracy lies
+- [ ] **TH.ML08** Class imbalance: weights, oversampling, SMOTE inside the fold
+- [ ] **TH.ML09** Feature engineering: encodings, scaling, imputation, selection, SHAP; feature stores
+- [ ] **TH.ML10** Hyperparameter tuning: grid, random, Bayesian (Optuna)
+- [ ] **TH.ML11** Deep learning essentials: layers, activations, backprop, vanishing/exploding gradients, dropout, norms, CNN, RNN/LSTM/GRU, Transformer/attention, embeddings, transfer learning, PyTorch, Hugging Face
+- [ ] **TH.ML12** Time-series forecasting: baselines, ETS, lags, backtests, intermittent demand, hierarchy
+- [ ] **TH.ML13** Recommenders: popularity, co-occurrence, item-item, ALS, implicit feedback, cold start, LTR, position bias
+
+## Statistics and mathematics (alongside stages 38 and 40; Practical Statistics, Kohavi)
+
+- [ ] **TH.ST01** Descriptive stats: mean vs median, variance, SD, percentiles, outliers
+- [ ] **TH.ST02** Distributions: normal, binomial, Poisson, negative binomial, log-normal, exponential
+- [ ] **TH.ST03** Probability: conditional, Bayes' theorem, independence
+- [ ] **TH.ST04** Hypothesis testing: p-value, CI, type I/II errors, power, z/t tests, bootstrap, multiple comparisons, peeking
+- [ ] **TH.ST05** Correlation vs causation, confounders, holdouts and uplift
+- [ ] **TH.ST06** Linear algebra: vectors, dot product, cosine, matrices, factorisation, eigenvalues
+- [ ] **TH.ST07** Calculus: derivatives, gradients, chain rule; boosting as gradient descent
+
+## MLOps (stages 39–41; Huyen, Reliable ML, Rules of ML)
+
+- [ ] **TH.MO01** ML lifecycle and where projects die
+- [ ] **TH.MO02** Tracking, registry, versioning (MLflow); data versioning (Iceberg snapshots, DVC); reproducibility
+- [ ] **TH.MO03** Serving: batch vs online, REST vs gRPC, signatures, ONNX, quantization, pruning, distillation; TorchServe/Triton/BentoML/KServe
+- [ ] **TH.MO04** Latency and throughput budgets, batching, CPU vs GPU, data vs model parallelism
+- [ ] **TH.MO05** Training-serving skew and feature stores
+- [ ] **TH.MO06** Deployment: shadow, canary, A/B; rollback through the registry
+- [ ] **TH.MO07** Monitoring: infra, data drift (PSI, KS), concept drift, quality with delayed labels, prediction logs, model cards
+- [ ] **TH.MO08** Retraining: scheduled vs triggered, approval vs auto; Kubeflow / SageMaker / Vertex / Airflow trade-offs
+- [ ] **TH.MO09** LLM ops: adapters, token and cost budgets, prompt versioning, golden sets, LLM-as-a-judge, prompt injection, tenant-safe retrieval, tool calling with approvals
+- [ ] **TH.MO10** Responsible ML: fairness per segment, explainability, privacy, what the audit log must hold

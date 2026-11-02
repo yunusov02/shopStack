@@ -22,6 +22,7 @@ The roadmap (`docs/retail-saas-roadmap.md`) is the source of truth. These files 
 | `stage-00-setup.md` … `stage-10-scale.md` | Levels 1–2, fine-grained |
 | `stage-11-hr.md` … `stage-25-marketplace-sync.md` | Levels 3–5, one task per module piece |
 | `stage-26-general-ledger.md` … `stage-33-multi-company.md` | Part II (ERP), one task per module piece |
+| `stage-34-data-platform.md` … `stage-41-llm-assistant.md` | Part III (data and ML platform), one task per pipeline, model or service piece |
 | `theory-tracks.md` | Theory tracks, one task per topic |
 
 ## Conventions used in tasks
@@ -32,3 +33,4 @@ The roadmap (`docs/retail-saas-roadmap.md`) is the source of truth. These files 
 - "service" = business rules, works through the Unit of Work, raises domain errors.
 - "endpoints" = FastAPI router with Pydantic v2 schemas, permission dependency, single error format.
 - "tests" = pytest + pytest-asyncio + httpx against a real Postgres (Testcontainers from S0.T16).
+- Part III additions: "DAG" = an Airflow DAG in `data/dags/` that only imports from `data/`; "dbt model" = a model in `data/warehouse/models/` with tests; "job" = a PySpark job in `data/jobs/`; "pipeline" = a training or scoring script in `ml/pipelines/` run from a DAG; "lab" = a measured experiment whose numbers go into the README; every model task ends with a comparison against its baseline.
