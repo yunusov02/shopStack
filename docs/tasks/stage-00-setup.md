@@ -7,7 +7,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T01** Create the repo, protect `main`, enable conventional commits
   Must know: git branching, branch protection, Conventional Commits
 
-- [x] **S0.T02** `uv init`, `pyproject.toml`, lock file, `.python-version`
+- [ ] **S0.T02** `uv init`, `pyproject.toml`, lock file, `.python-version`
   Must know: uv, pyproject, lock files
 
 - [ ] **S0.T03** Configure ruff (lint + format) and mypy strict in `pyproject.toml`; fix every current error
@@ -21,7 +21,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 
 ## Configuration `[CORE]`
 
-- [x] **S0.T06** `Settings` with pydantic-settings: DB, Redis, `DEBUG`, `ENV`; loaded from `.env`; `.env.example` in git
+- [ ] **S0.T06** `Settings` with pydantic-settings: DB, Redis, `DEBUG`, `ENV`; loaded from `.env`; `.env.example` in git
   Must know: pydantic-settings, environment variables, 12-factor config
 
 - [ ] **S0.T07** Enforce UTC: a `utcnow()` helper, ruff `DTZ` rule on, a test that a naive datetime is rejected by the DB layer
@@ -29,13 +29,13 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 
 ## Database layer `[CORE]`
 
-- [x] **S0.T08** Async engine and `async_sessionmaker` with asyncpg
+- [ ] **S0.T08** Async engine and `async_sessionmaker` with asyncpg
   Must know: SQLAlchemy 2.0 async, asyncpg, connection pool
 
-- [x] **S0.T09** Alembic with async `env.py`, first migration
+- [ ] **S0.T09** Alembic with async `env.py`, first migration
   Must know: Alembic, autogenerate, async migrations
 
-- [x] **S0.T10** `UnitOfWork`: `__aenter__`/`__aexit__`, commit on success, rollback on error
+- [ ] **S0.T10** `UnitOfWork`: `__aenter__`/`__aexit__`, commit on success, rollback on error
   Must know: async context manager, transaction, AsyncSession
 
 - [ ] **S0.T11** Declarative `Base` with naming conventions for constraints and indexes; `TimestampMixin` (`created_at`, `updated_at`, timestamptz, server default)

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "tasks/stage-34-data-platform.md",
+                "file": "tasks/stage-00-setup.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "stage-34-data-platform"
+              "title": "stage-00-setup"
             }
           }
         ]
@@ -190,6 +190,7 @@
   },
   "active": "617bc8b926656503",
   "lastOpenFiles": [
+    "tasks/stage-34-data-platform.md",
     "tasks/stage-24-supplier-portal.md",
     "tasks/stage-23-media.md",
     "retail-saas-roadmap.md"
