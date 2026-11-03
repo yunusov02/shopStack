@@ -1,0 +1,10 @@
+[project]
+name = "shopstack"
+version = "0.1.0"
+description = "ERP shopstack application"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.162.0",
+    "sqlalchemy>=2.1.6",
+]

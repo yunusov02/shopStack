@@ -6,7 +6,7 @@ paths:
 # Python code standards
 
 ## Module structure
-Each domain module lives in `src/shopstack/modules/<module>/` and consists of:
+`src/` is a flat source root (no named package): `src/core/` for shared code, `src/modules/<module>/` for domain modules, imported as `from core...` and `from modules...`. See `docs/project-structure.md`. Each domain module lives in `src/modules/<module>/` and consists of:
 - `router.py`: HTTP layer only (request handling, DI, status codes). No business logic, no SQL.
 - `schemas.py`: Pydantic models for input and output. SQLAlchemy models are never returned from the API directly.
 - `service.py`: business logic and the transaction boundary (Unit of Work). Knows nothing about HTTP: raises domain exceptions instead of `HTTPException`.
