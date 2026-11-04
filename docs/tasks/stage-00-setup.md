@@ -7,7 +7,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T01** Create the repo, protect `main`, enable conventional commits
   Must know: git branching, branch protection, Conventional Commits
 
-- [ ] **S0.T02** `uv init`, `pyproject.toml`, lock file, `.python-version`
+- [x] **S0.T02** `uv init`, `pyproject.toml`, lock file, `.python-version`
   Must know: uv, pyproject, lock files
 
 - [ ] **S0.T03** Configure ruff (lint + format) and mypy strict in `pyproject.toml`; fix every current error
