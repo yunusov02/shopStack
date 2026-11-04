@@ -10,7 +10,7 @@ Don't write code and don't create files. The job is to give the user a clear pat
 
 ## 1. Determine the current state
 
-1. Read `retail-saas-roadmap.md` and look at:
+1. Read `docs/retail-saas-roadmap.md` and the matching `docs/tasks/stage-NN-*.md` file (small tasks with IDs like `S3.T07`, each with a "Must know" line) and look at:
    - which checkboxes are ticked;
    - each stage's prerequisites ("Prerequisites");
    - the MVP line: level 1 `[CORE]` tasks come first (stages 0, 1, 2, 3, 5, 9, 10).

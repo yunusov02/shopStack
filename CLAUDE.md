@@ -1,6 +1,6 @@
 # shopStack
 
-Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `retail-saas-roadmap.md` (written in English): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria.
+Multi-tenant retail SaaS: POS, inventory, procurement, promotions, loyalty, finance and more. This is a learning project; the goal is to reach middle+ backend level. The single source of truth is `docs/retail-saas-roadmap.md` (written in English): stages, `[CORE]/[EXT]/[OPT]` tags, completion criteria. The roadmap is broken into small tasks in `docs/tasks/` (one file per stage, IDs like `S3.T07`); `/next` picks from there.
 
 ## Workflow: the user writes, Claude reviews
 
@@ -26,6 +26,8 @@ Skills:
 
 ## Stack
 Fixed by the roadmap; changes require an ADR: Python 3.13+, uv, FastAPI, Pydantic v2 + pydantic-settings, SQLAlchemy 2.0 async + asyncpg, Alembic, PostgreSQL, Redis, Docker Compose, ruff, mypy (strict), pytest + pytest-asyncio + httpx + Testcontainers, pre-commit, GitHub Actions. Back-office UI uses Jinja2 + HTMX.
+
+Part III (stages 34–41, data and ML platform) adds its own stack (MinIO + Iceberg, Debezium, Airflow, dbt, Spark, DuckDB/Polars, MLflow, LightGBM, pgvector, an LLM provider adapter, and more); the full list with ADR numbers is in the roadmap's Technology map. Each tool enters only through its ADR.
 
 Don't suggest alternative libraries unless the user asks. If a roadmap choice causes a real problem, say so and suggest writing an ADR.
 
