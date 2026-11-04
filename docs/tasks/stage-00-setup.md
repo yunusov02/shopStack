@@ -10,7 +10,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T02** `uv init`, `pyproject.toml`, lock file, `.python-version`
   Must know: uv, pyproject, lock files
 
-- [ ] **S0.T03** Configure ruff (lint + format) and mypy strict in `pyproject.toml`; fix every current error
+- [x] **S0.T03** Configure ruff (lint + format) and mypy strict in `pyproject.toml`; fix every current error
   Must know: ruff rules, mypy strict mode, type hints
 
 - [ ] **S0.T04** Add pre-commit with ruff, ruff-format, mypy hooks; `pre-commit install`
