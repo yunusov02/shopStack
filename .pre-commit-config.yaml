@@ -1,17 +1,17 @@
 repos:
   - repo: local
     hooks:
-      # Ruff Formatting
-      - id: ruff-format
-        name: Ruff format
-        entry: uv run ruff format
-        language: system
-        types: [python]
-
       # Ruff Linting
       - id: ruff-check
         name: Ruff check
         entry: uv run ruff check --fix
+        language: system
+        types: [python]
+
+      # Ruff Formatting
+      - id: ruff-format
+        name: Ruff format
+        entry: uv run ruff format
         language: system
         types: [python]
 

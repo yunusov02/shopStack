@@ -13,10 +13,10 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T03** Configure ruff (lint + format) and mypy strict in `pyproject.toml`; fix every current error
   Must know: ruff rules, mypy strict mode, type hints
 
-- [ ] **S0.T04** Add pre-commit with ruff, ruff-format, mypy hooks; `pre-commit install`
+- [x] **S0.T04** Add pre-commit with ruff, ruff-format, mypy hooks; `pre-commit install`
   Must know: pre-commit, git hooks
 
-- [ ] **S0.T05** Add `Makefile`: `up`, `down`, `lint`, `format`, `typecheck`, `test`, `migrate`, `revision`
+- [x] **S0.T05** Add `Makefile`: `up`, `down`, `lint`, `format`, `typecheck`, `test`, `migrate`, `revision`
   Must know: Makefile targets, `.PHONY`
 
 ## Configuration `[CORE]`

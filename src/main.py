@@ -1,8 +1,8 @@
-def main() -> None:
-    print("Hello from shopstack!")
+from fastapi import FastAPI
 
-    print("This is very long string come from ruff")
+app = FastAPI()
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/healthy")
+def healthy() -> str:
+    return "Healthy"
