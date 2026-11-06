@@ -29,10 +29,10 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 
 ## Database layer `[CORE]`
 
-- [ ] **S0.T08** Async engine and `async_sessionmaker` with asyncpg
+- [x] **S0.T08** Async engine and `async_sessionmaker` with asyncpg
   Must know: SQLAlchemy 2.0 async, asyncpg, connection pool
 
-- [ ] **S0.T09** Alembic with async `env.py`, first migration
+- [x] **S0.T09** Alembic with async `env.py`, first migration
   Must know: Alembic, autogenerate, async migrations
 
 - [ ] **S0.T10** `UnitOfWork`: `__aenter__`/`__aexit__`, commit on success, rollback on error
