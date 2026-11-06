@@ -41,7 +41,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T11** Declarative `Base` with naming conventions for constraints and indexes; `TimestampMixin` (`created_at`, `updated_at`, timestamptz, server default)
   Must know: SQLAlchemy declarative base, `MetaData(naming_convention=...)`, mixins
 
-- [ ] **S0.T12** Generic `Repository[Model]` base: `get`, `add`, `list` with typed generics; `BaseService` holding the UoW
+- [x] **S0.T12** Generic `Repository[Model]` base: `get`, `add`, `list` with typed generics; `BaseService` holding the UoW
   Must know: Python generics, `TypeVar`, repository pattern, service layer
 
 ## Application `[CORE]`
