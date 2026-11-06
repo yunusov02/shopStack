@@ -32,3 +32,24 @@
 | `uv run pre-commit run --all-files` | Run hooks on entire project |
 | `uv run pre-commit uninstall` | Remove Git hooks |
 | `uv run pre-commit autoupdate` | Update external hook versions |
+
+
+
+
+14. 
+```bash
+    docker run --name shopstack-db \
+    -e POSTGRES_USER=postgres \
+    -e POSTGRES_PASSWORD=shopstack \
+    -e POSTGRES_DB=shopstack \
+    -p 15432:5432 \
+    -v postgres-data:/var/lib/postgresql \
+    -d postgres:18
+```
+
+15. `alembic init -t async alembic ` this would be inside src folder that's why should change alembic.ini file and move it from src to root directory
+
+16. `uv run alembic revision --autogenerate -m "initial migration"`
+17. `uv run alembic upgrade head`
+
+
