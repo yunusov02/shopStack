@@ -35,10 +35,10 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [x] **S0.T09** Alembic with async `env.py`, first migration
   Must know: Alembic, autogenerate, async migrations
 
-- [ ] **S0.T10** `UnitOfWork`: `__aenter__`/`__aexit__`, commit on success, rollback on error
+- [x] **S0.T10** `UnitOfWork`: `__aenter__`/`__aexit__`, commit on success, rollback on error
   Must know: async context manager, transaction, AsyncSession
 
-- [ ] **S0.T11** Declarative `Base` with naming conventions for constraints and indexes; `TimestampMixin` (`created_at`, `updated_at`, timestamptz, server default)
+- [x] **S0.T11** Declarative `Base` with naming conventions for constraints and indexes; `TimestampMixin` (`created_at`, `updated_at`, timestamptz, server default)
   Must know: SQLAlchemy declarative base, `MetaData(naming_convention=...)`, mixins
 
 - [ ] **S0.T12** Generic `Repository[Model]` base: `get`, `add`, `list` with typed generics; `BaseService` holding the UoW
