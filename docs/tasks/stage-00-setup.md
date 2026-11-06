@@ -21,10 +21,10 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 
 ## Configuration `[CORE]`
 
-- [ ] **S0.T06** `Settings` with pydantic-settings: DB, Redis, `DEBUG`, `ENV`; loaded from `.env`; `.env.example` in git
+- [x] **S0.T06** `Settings` with pydantic-settings: DB, Redis, `DEBUG`, `ENV`; loaded from `.env`; `.env.example` in git
   Must know: pydantic-settings, environment variables, 12-factor config
 
-- [ ] **S0.T07** Enforce UTC: a `utcnow()` helper, ruff `DTZ` rule on, a test that a naive datetime is rejected by the DB layer
+- [x] **S0.T07** Enforce UTC: a `utcnow()` helper, ruff `DTZ` rule on, a test that a naive datetime is rejected by the DB layer
   Must know: timezone-aware datetime, `datetime.now(UTC)`, timestamptz
 
 ## Database layer `[CORE]`
