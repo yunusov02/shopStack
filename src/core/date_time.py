@@ -14,6 +14,3 @@ def to_timezone(value: datetime, tz: ZoneInfo = DEFAULT_TIMEZONE) -> datetime:
         raise ValueError("Naive datetime is not allowed")
 
     return value.astimezone(tz)
-
-
-print(utc_now())

@@ -19,12 +19,11 @@ typecheck:
 
 
 dev:
-	uv run uvicorn main:app --app-dir src --reload --port 8000
+	uv run uvicorn src.main:app --reload --port 8000
 
 
 test:
 	uv run pytest
-
 
 migrate:
 	uv run alembic upgrade head

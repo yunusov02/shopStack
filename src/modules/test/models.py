@@ -1,7 +1,7 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db.base import SoftDeleteMixin
+from src.db.base import SoftDeleteMixin
 
 
 class TestModel(SoftDeleteMixin):

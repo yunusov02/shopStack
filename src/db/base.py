@@ -5,7 +5,7 @@ from sqlalchemy import Boolean, DateTime
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from core.date_time import utc_now
+from src.core.date_time import utc_now
 
 
 class Base(AsyncAttrs, DeclarativeBase):

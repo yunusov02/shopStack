@@ -1,26 +1,25 @@
-
-from typing import Generic, Optional, Sequence, Type, TypeVar
-
+from collections.abc import Sequence
+from typing import TypeVar
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from pydantic import BaseModel
-
 
 ModelType = TypeVar("ModelType", bound=DeclarativeBase)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-
-
-    def __init__(self, model: Type[ModelType], session: AsyncSession):
+class BaseRepository[
+    ModelType: DeclarativeBase,
+    CreateSchemaType: BaseModel,
+    UpdateSchemaType: BaseModel,
+]:
+    def __init__(self, model: type[ModelType], session: AsyncSession):
         self.model = model
         self.session = session
-
 
     async def get(self, id: UUID) -> ModelType | None:
 
@@ -42,7 +41,6 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.session.flush()  # Flush to get the ID of the new entity
         return new_entity
 
-
     async def update(self, id: UUID, entity: UpdateSchemaType) -> ModelType | None:
 
         exising_entity = await self.get(id)
@@ -50,12 +48,13 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if not exising_entity:
             return None
 
-        for key, value in entity.dict(exclude_unset=True).items(): # exclude unset fields to avoid overwriting existing values with None
+        for key, value in entity.dict(
+            exclude_unset=True
+        ).items():  # exclude unset fields to avoid overwriting existing values with None
             setattr(exising_entity, key, value)
 
         await self.session.flush()  # Flush to persist the changes
         return exising_entity
-
 
     async def delete(self, id: UUID) -> bool:
 
@@ -67,4 +66,3 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.session.delete(entity)
         await self.session.flush()  # Flush to persist the deletion
         return True
-

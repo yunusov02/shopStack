@@ -46,7 +46,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 
 ## Application `[CORE]`
 
-- [ ] **S0.T13** Modular layout: `src/modules/<name>/{router,schemas,service,repository,models}.py`; `src/core/` for shared code; delete `app/models/test.py`
+- [x] **S0.T13** Modular layout: `src/modules/<name>/{router,schemas,service,repository,models}.py`; `src/core/` for shared code; delete `app/models/test.py`
   Must know: Python packages, import paths, modular monolith
 
 - [ ] **S0.T14** App factory `create_app()` and lifespan: engine and sessionmaker created on startup, stored on `app.state`, disposed on shutdown; no DB access at import time; `logging` instead of `print`
@@ -58,7 +58,7 @@ Prerequisites: none. Done when `make up` brings the project up and CI is green.
 - [ ] **S0.T16** Middleware order and request lifecycle: correlation ID middleware (`X-Request-ID`), CORS with explicit origins from settings, global exception handler with one error format `{code, message, details}`
   Must know: ASGI middleware, CORS, FastAPI exception handlers
 
-- [ ] **S0.T17** `/health/live` (always 200) and `/health/ready` (checks DB and Redis with a timeout)
+- [x] **S0.T17** `/health/live` (always 200) and `/health/ready` (checks DB and Redis with a timeout)
   Must know: liveness vs readiness, `SELECT 1`, asyncio timeout
 
 ## Tests `[CORE]`
