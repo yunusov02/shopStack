@@ -24,10 +24,11 @@ Read every changed file **in full**; a diff alone lacks context. Also read relat
 
 ## 2. Map it to the roadmap
 
-Find which stage and task in `docs/retail-saas-roadmap.md` this change belongs to. Then answer three questions:
-- Is the task requirement fully met?
-- How close is the stage to its completion criteria ("Done when")?
-- Has something from a later stage been pulled in and over-engineered now? Scope creep is a finding too.
+Find which slice this change belongs to: its checklist in `docs/roadmap/00 Roadmap.md` and its spec (Files, Models, Endpoints, Steps, Tests) in the matching `docs/roadmap/0N Phase X - *.md` file. Then answer:
+- Does it match the spec: file layout, model columns and constraints, endpoint paths and status codes, the conventions in `01 Slice specs - Conventions.md`?
+- Are the spec's test names written, and do they test what their names say? A missing spec test is a finding.
+- Did the slice loop happen: was the problem made visible (failing test, parallel test, measurement) before the fix? Is the ADR or before/after number written when the checklist asks for one?
+- Scope creep: a slice adds only what its flow needs, and a technology arrives only after its trigger. Code prepared for a later slice (a cache before slice 17, Celery before 18, RLS before 7, etc.) is a finding.
 
 ## 3. Automated checks
 
@@ -57,7 +58,7 @@ Verify every finding. If unsure, re-read the code or check with a small experime
 Write the review in Uzbek (Latin script), translating the headings below.
 
 ~~~markdown
-## Review: <what was reviewed> (<roadmap stage and task>)
+## Review: <what was reviewed> (slice <NN>: <checklist item>)
 
 **Verdict:** ✅ Ready to merge | 🔁 Fix and show again
 <1–2 sentence overall assessment>
@@ -72,7 +73,7 @@ Write the review in Uzbek (Latin script), translating the headings below.
 ...
 
 ### 🔵 For learning
-Minor notes, better approaches, things that will matter in later stages.
+Minor notes, better approaches, things that will matter in later slices.
 
 ### 👍 Done well
 1–3 specific things (not generic praise).
@@ -81,7 +82,7 @@ Minor notes, better approaches, things that will matter in later stages.
 1–3 interview-style questions about this code: "Why X? What's the alternative? What happens when Y?"
 
 ### Roadmap
-Which checkboxes are now done, or what is still missing.
+Which slice checkboxes are now done, which spec tests are still missing.
 ~~~
 
 ## Rules
@@ -89,5 +90,5 @@ Which checkboxes are now done, or what is still missing.
 - Don't invent problems. If the code is good, a short review is fine.
 - Snippets stay within 5 lines and illustrate a concept; they are not a ready-made fix.
 - If the user says "yechimni ko'rsat" / "show me the solution", showing it is fine from then on.
-- If the verdict is ✅ and the task is complete, offer to tick the roadmap checkbox. Tick it only with the user's consent.
+- If the verdict is ✅ and the task is complete, offer to tick the slice checkbox in `00 Roadmap.md`. Tick it only with the user's consent.
 - Give a docs link only if you are sure it is correct. Otherwise name the docs section to read.

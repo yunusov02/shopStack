@@ -1,19 +1,20 @@
 # Domain rules
 
-The roadmap's "Domain rules" apply to the whole project. In review, violating any of them is a 🔴 (must fix).
+The roadmap's "Rules fixed from day one" (`docs/roadmap/00 Roadmap.md`) and these rules apply to the whole project. In review, violating any of them is a 🔴 (must fix).
 
-- **Money:** only `Decimal` (`Numeric(p, s)` in the DB) or integer minor units (tiyin). Never `float`, not even in tests.
-- **Quantity:** `Decimal(12, 3)` for weighted products.
+- **Money:** only `Decimal` (`numeric(14,2)` in the DB, a string in JSON) or integer minor units (tiyin). Never `float`, not even in tests.
+- **Quantity:** `numeric(12,3)` / `Decimal`, because weighted products have fractional quantities.
 - **Time:** UTC and timezone-aware only. Use `datetime.now(UTC)`; `datetime.utcnow()` and naive datetimes are forbidden. Use `timestamptz` in the DB. The tenant's time zone is only for display and for rules like "happy hour".
 - **Stock decrements are synchronous:** a sale and its stock change happen in one ACID transaction, never through Celery or events.
 - **Documents are immutable:** a completed sale, receipt, or transfer is never edited. Mistakes are corrected with a new document: a return, an adjustment, or a reversal (storno).
 - **Snapshots:** a sale line stores price, cost, tax, and applied promotions as they were at the time of sale. Reading the current price through an FK is wrong.
 - **Ledgers:** every balance (stock, customer balance, points, debt) is the sum of immutable entries. If a separate balance column exists, it is updated in the same transaction as the ledger entry and verified by reconciliation.
 - **State machines:** every document has explicit states and allowed transitions, and transitions are logged. State changes go through a transition function, not a direct `obj.status = ...`.
-- **Sensitive operations** (refund, void, manual discount, price change, adjustment) are protected by a permission and written to the audit log.
-- **Multi-tenancy (from stage 1):**
-  - every tenant-owned table has `tenant_id`;
-  - filtering fails closed: with no tenant context, the result is an error, not all rows;
-  - an object belonging to another tenant or location returns `404`, not `403`, because `403` reveals that the object exists.
+- **Sensitive operations** (refund, void, manual discount, price change, adjustment) are protected by a permission and written to the audit log. Permissions arrive in slice 9 and the audit log in slice 8; before that, don't fake them, but keep these operations in the service layer so a check can be added in one place.
+- **Multi-tenancy:**
+  - every business table has `tenant_id uuid not null` **from slice 1**, even while there is one seeded tenant;
+  - tenant filtering, the global filter and RLS arrive in slice 7 (when the second shop joins); from then on:
+    - filtering fails closed: with no tenant context, the result is an error, not all rows;
+    - an object belonging to another tenant or location returns `404`, not `403`, because `403` reveals that the object exists.
 - **Concurrency:** if a limit or balance check is "read → check → write", it needs a lock (`with_for_update`) or an atomic `UPDATE ... WHERE`. When locking several rows, always acquire them in the same order to avoid deadlocks.
-- **Idempotency:** external requests that change money or stock are accepted with an `Idempotency-Key`.
+- **Idempotency:** external requests that change money or stock are accepted with an `Idempotency-Key` (from slice 3).
