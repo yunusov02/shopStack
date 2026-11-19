@@ -1,2 +1,0 @@
-# shopStack
-shopStack POS ERP
